@@ -1,28 +1,116 @@
+/* 전체 배경 */
 body {
-    font-family: Arial, sans-serif;
-    background: #f4f6f8;
-    text-align: center;
-    padding-top: 50px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: linear-gradient(135deg, #eef2f7, #f9fafb);
+    margin: 0;
+    padding: 40px;
+    color: #333;
 }
 
+/* 제목 */
+h1 {
+    margin-bottom: 20px;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+/* 메인 카드 */
 .container {
     background: white;
-    width: 300px;
+    max-width: 600px;
     margin: auto;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
 }
 
-button {
-    width: 100px;
-    height: 40px;
-    margin: 10px;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-.log {
-    margin-top: 20px;
+/* 이름 선택 */
+label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
     text-align: left;
 }
+
+select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-size: 15px;
+    margin-bottom: 20px;
+}
+
+/* 날짜 */
+#today {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+/* 버튼 영역 */
+button {
+    padding: 10px 16px;
+    margin: 5px 6px 10px 0;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* 버튼 색상 */
+button:nth-of-type(1) {
+    background: #2563eb;
+    color: white;
+}
+
+button:nth-of-type(2) {
+    background: #16a34a;
+    color: white;
+}
+
+button:nth-of-type(3) {
+    background: #111827;
+    color: white;
+}
+
+/* 버튼 호버 */
+button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* 테이블 */
+table {
+    width: 100%;
+    margin-top: 25px;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+/* 헤더 */
+thead {
+    background: #f1f5f9;
+}
+
+th {
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+}
+
+/* 내용 */
+td {
+    padding: 10px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* 행 호버 */
+tbody tr:hover {
+    background: #f9fafb;
+}
+
