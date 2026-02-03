@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>관리자 - 출퇴근 전체 로그</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+</head>
+<body>
+
+<h1>관리자 전체 출퇴근 로그</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>날짜</th>
+      <th>이메일</th>
+      <th>출근</th>
+      <th>퇴근</th>
+    </tr>
+  </thead>
+  <tbody id="adminLogTable"></tbody>
+</table>
+
+<script src="script.js"></script>
+</body>
+</html>
