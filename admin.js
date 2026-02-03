@@ -18,7 +18,7 @@ async function loadTodayAttendance() {
   snapshot.forEach(doc => {
     const d = doc.data();
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${d.name}</td><td>${d.checkedAt?.toDate().toLocaleTimeString() || "-"}</td><td>${d.checkOut || "-"}</td>`;
+    tr.innerHTML = `<td>${d.name}</td><td>${d.attend || "-"}</td><td>${d.leave || "-"}</td>`;
     table.appendChild(tr);
   });
 }
