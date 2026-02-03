@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>출퇴근 관리</title>
+  <title>Attendance</title>
   <link rel="stylesheet" href="style.css">
 
   <!-- Firebase SDK -->
@@ -11,21 +11,20 @@
 </head>
 <body>
 
-<h1>출퇴근 관리</h1>
+<h1>Attendance Check</h1>
 
 <div class="container">
 
-  <label>이름 선택</label>
   <select id="nameSelect">
-    <option value="">-- 선택 --</option>
-    <option value="홍길동">홍길동</option>
-    <option value="김철수">김철수</option>
-    <option value="이영희">이영희</option>
+    <option value="">-- Select Name --</option>
+    <option value="Hong">Hong</option>
+    <option value="Kim">Kim</option>
+    <option value="Lee">Lee</option>
   </select>
 
   <div class="buttons">
-    <button onclick="checkIn()">출근</button>
-    <button onclick="checkOut()">퇴근</button>
+    <button onclick="checkIn()">Check In</button>
+    <button onclick="checkOut()">Check Out</button>
   </div>
 
 </div>
