@@ -7,9 +7,9 @@
   <style>
     body {
       margin: 0;
+      font-family: Arial, sans-serif;
       display: flex;
       height: 100vh;
-      font-family: Arial, sans-serif;
     }
 
     aside {
@@ -36,6 +36,10 @@
       padding: 10px;
       text-align: center;
     }
+
+    #adminSection {
+      display: none;
+    }
   </style>
 </head>
 
@@ -47,21 +51,34 @@
 </aside>
 
 <main>
-  <h2>Employee Management</h2>
 
-  <input id="newName" placeholder="Employee name" />
-  <button id="addBtn">Add</button>
+  <!-- PIN -->
+  <div id="pinSection">
+    <h2>Admin Access</h2>
+    <input id="pinInput" type="password" placeholder="Enter PIN" />
+    <button id="pinBtn">Enter</button>
+    <p id="pinError" style="color:red;"></p>
+  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Status</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="empBody"></tbody>
-  </table>
+  <!-- Admin -->
+  <div id="adminSection">
+    <h2>Employee Management</h2>
+
+    <input id="newName" placeholder="Employee name" />
+    <button id="addBtn">Add</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="empBody"></tbody>
+    </table>
+  </div>
+
 </main>
 
 <script type="module" src="admin.js"></script>

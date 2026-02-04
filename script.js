@@ -13,21 +13,20 @@ const body = document.getElementById("attendanceBody");
 
 async function loadEmployees() {
   body.innerHTML = "";
+  const snap = await getDocs(collection(db, "employees"));
 
-  const empSnap = await getDocs(collection(db, "employees"));
-
-  for (const d of empSnap.docs) {
+  snap.forEach(d => {
     const emp = d.data();
-    if (!emp.active) continue;
+    if (!emp.active) return;
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${emp.name}</td>
-      <td><button data-attend="${d.id}">Attend</button></td>
-      <td><button data-leave="${d.id}">Leave</button></td>
+      <td><button data-attend="${d.id}" data-name="${emp.name}">Attend</button></td>
+      <td><button data-leave="${d.id}" data-name="${emp.name}">Leave</button></td>
     `;
     body.appendChild(tr);
-  }
+  });
 }
 
 async function record(type, employeeId, name) {
@@ -56,19 +55,13 @@ async function record(type, employeeId, name) {
     timestamp: new Date()
   });
 
-  alert(
-    type === "attend"
-      ? `${name} has successfully attended.`
-      : `${name} has successfully left.`
-  );
+  alert(`${name} ${type === "attend" ? "attended" : "left"} successfully.`);
 }
 
 body.addEventListener("click", async e => {
   const attendId = e.target.dataset.attend;
   const leaveId = e.target.dataset.leave;
-  if (!attendId && !leaveId) return;
-
-  const name = e.target.closest("tr").children[0].textContent;
+  const name = e.target.dataset.name;
 
   if (attendId) await record("attend", attendId, name);
   if (leaveId) await record("leave", leaveId, name);

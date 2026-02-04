@@ -7,9 +7,27 @@ import {
   doc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+const ADMIN_PIN = "0317";
+
+const pinSection = document.getElementById("pinSection");
+const adminSection = document.getElementById("adminSection");
+const pinBtn = document.getElementById("pinBtn");
+const pinInput = document.getElementById("pinInput");
+const pinError = document.getElementById("pinError");
+
 const body = document.getElementById("empBody");
 const addBtn = document.getElementById("addBtn");
 const newName = document.getElementById("newName");
+
+pinBtn.onclick = () => {
+  if (pinInput.value === ADMIN_PIN) {
+    pinSection.style.display = "none";
+    adminSection.style.display = "block";
+    loadEmployees();
+  } else {
+    pinError.textContent = "Invalid PIN";
+  }
+};
 
 async function loadEmployees() {
   body.innerHTML = "";
@@ -17,8 +35,8 @@ async function loadEmployees() {
 
   snap.forEach(d => {
     const emp = d.data();
-    const tr = document.createElement("tr");
 
+    const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${emp.name}</td>
       <td>${emp.active ? "Active" : "Inactive"}</td>
@@ -26,7 +44,6 @@ async function loadEmployees() {
         ${emp.active ? `<button data-id="${d.id}">Deactivate</button>` : ""}
       </td>
     `;
-
     body.appendChild(tr);
   });
 }
@@ -54,6 +71,4 @@ body.addEventListener("click", async e => {
 
   loadEmployees();
 });
-
-loadEmployees();
 
