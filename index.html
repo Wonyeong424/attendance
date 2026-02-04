@@ -1,71 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Attendance</title>
+<meta charset="UTF-8" />
+<title>Attendance</title>
 
-  <script type="module" src="firebase.js"></script>
-  <script type="module" src="script.js"></script>
+<script type="module" src="firebase.js"></script>
+<script type="module" src="script.js"></script>
 
-  <style>
-    body {
-      font-family: system-ui, -apple-system;
-      background: #f4f6f9;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
+<style>
+body {
+  font-family: system-ui, -apple-system;
+  background: #f4f6f9;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-    .card {
-      background: white;
-      width: 360px;
-      padding: 30px;
-      border-radius: 16px;
-      box-shadow: 0 12px 30px rgba(0,0,0,.1);
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
+.card {
+  background: white;
+  width: 360px;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-    h2 {
-      text-align: center;
-      margin: 0;
-    }
+h2 { text-align:center; margin:0; }
 
-    select {
-      padding: 14px;
-      font-size: 16px;
-      border-radius: 10px;
-      border: 1px solid #d1d5db;
-    }
+select {
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+}
 
-    .buttons {
-      display: flex;
-      gap: 12px;
-    }
+.buttons {
+  display:flex;
+  gap:12px;
+}
 
-    button {
-      flex: 1;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      color: white;
-    }
+button {
+  flex:1;
+  padding:14px;
+  border:none;
+  border-radius:10px;
+  font-size:16px;
+  font-weight:600;
+  cursor:pointer;
+  color:white;
+}
 
-    .attend { background: #4f46e5; }
-    .leave  { background: #10b981; }
+.attend { background:#4f46e5; }
+.leave  { background:#10b981; }
 
-    .attend:hover { background: #4338ca; }
-    .leave:hover  { background: #059669; }
-  </style>
+.attend:hover { background:#4338ca; }
+.leave:hover  { background:#059669; }
+</style>
 </head>
 
 <body>
-
 <div class="card">
   <h2>Attendance</h2>
 
@@ -78,7 +74,7 @@
     <button class="leave" id="leaveBtn">Leave</button>
   </div>
 </div>
-
 </body>
 </html>
+
 
