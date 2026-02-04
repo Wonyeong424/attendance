@@ -44,6 +44,7 @@ body {
   color: white;
   border: none;
   border-radius: 8px;
+  cursor: pointer;
 }
 
 /* ===== 관리자 ===== */
@@ -53,7 +54,7 @@ body {
 }
 
 .sidebar {
-  width: 230px;
+  width: 220px;
   background: #111827;
   color: white;
   padding: 20px;
@@ -86,11 +87,17 @@ table {
   width: 100%;
   border-collapse: collapse;
   background: white;
+  margin-top: 15px;
 }
 
 th, td {
   padding: 12px;
   border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+th {
+  background: #f3f4f6;
 }
 </style>
 </head>
@@ -112,14 +119,12 @@ th, td {
     <h2>Admin</h2>
     <button onclick="showTab('today')">Today</button>
     <button onclick="showTab('history')">History</button>
-    <button onclick="showTab('staff')">Staff</button>
     <button onclick="logout()">Logout</button>
   </div>
 
   <div class="main">
     <div id="today"></div>
     <div id="history" class="hidden"></div>
-    <div id="staff" class="hidden"></div>
   </div>
 </div>
 

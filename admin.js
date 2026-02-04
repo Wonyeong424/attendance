@@ -1,11 +1,7 @@
 import { db } from "./firebase.js";
-
 import {
   collection,
-  doc,
-  getDocs,
-  addDoc,
-  updateDoc
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =====================
@@ -31,7 +27,6 @@ function initAdmin() {
   document.getElementById("admin").style.display = "flex";
   loadToday();
   loadHistory();
-  loadStaff();
 }
 
 if (localStorage.getItem("admin") === "true") {
@@ -41,29 +36,46 @@ if (localStorage.getItem("admin") === "true") {
 /* =====================
    TODAY
 ===================== */
-const today = new Date().toISOString().slice(0, 10);
+const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
 
 async function loadToday() {
   const box = document.getElementById("today");
   box.innerHTML = `<h2>Today (${today})</h2>`;
 
-  const snap = await getDocs(collection(db, "attendance", today, "records"));
+  const snap = await getDocs(
+    collection(db, "attendance", today, "records")
+  );
 
   if (snap.empty) {
     box.innerHTML += "<p>No attendance records.</p>";
     return;
   }
 
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Attend</th>
+          <th>Leave</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
   snap.forEach(docSnap => {
     const r = docSnap.data();
-    box.innerHTML += `
-      <p>
-        ${docSnap.id} |
-        Attend: ${r.attendAt ? r.attendAt.toDate().toLocaleTimeString() : "-"} |
-        Leave: ${r.leaveAt ? r.leaveAt.toDate().toLocaleTimeString() : "-"}
-      </p>
+    html += `
+      <tr>
+        <td>${docSnap.id}</td>
+        <td>${r.attendAt ? r.attendAt.toDate().toLocaleTimeString() : "-"}</td>
+        <td>${r.leaveAt ? r.leaveAt.toDate().toLocaleTimeString() : "-"}</td>
+      </tr>
     `;
   });
+
+  html += "</tbody></table>";
+  box.innerHTML += html;
 }
 
 /* =====================
@@ -74,56 +86,12 @@ async function loadHistory() {
   box.innerHTML = "<h2>History</h2>";
 
   const snap = await getDocs(collection(db, "attendance"));
+
   snap.forEach(d => {
+    // 날짜 형식(YYYY-MM-DD)만 표시
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d.id)) return;
+
     box.innerHTML += `<p>📅 ${d.id}</p>`;
   });
 }
-
-/* =====================
-   STAFF
-===================== */
-async function loadStaff() {
-  const box = document.getElementById("staff");
-  box.innerHTML = `
-    <h2>Staff</h2>
-    <input id="newStaff" placeholder="Employee name">
-    <button onclick="addStaff()">Add</button>
-    <hr>
-    <div id="staffList"></div>
-  `;
-
-  const list = document.getElementById("staffList");
-  const snap = await getDocs(collection(db, "employees"));
-
-  snap.forEach(d => {
-    if (!d.data().active) return;
-
-    list.innerHTML += `
-      <p>
-        ${d.data().name}
-        <button onclick="removeStaff('${d.id}')">Remove</button>
-      </p>
-    `;
-  });
-}
-
-window.addStaff = async () => {
-  const name = document.getElementById("newStaff").value.trim();
-  if (!name) return alert("Enter a name");
-
-  await addDoc(collection(db, "employees"), {
-    name,
-    active: true
-  });
-
-  document.getElementById("newStaff").value = "";
-  loadStaff();
-};
-
-window.removeStaff = async (id) => {
-  await updateDoc(doc(db, "employees", id), {
-    active: false
-  });
-  loadStaff();
-};
 
