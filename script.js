@@ -1,7 +1,7 @@
-import { db, getTodayKey } from "./firebase.js";
+import { db } from "./firebase.js";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const EMPLOYEES = [
+const employees = [
   "Kiran Barthwal",
   "Jeenat Khan",
   "Rohin Dixit",
@@ -11,16 +11,16 @@ const EMPLOYEES = [
   "Sam Lee"
 ];
 
-const today = getTodayKey();
+const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
 
 const select = document.getElementById("employeeSelect");
 const attendBtn = document.getElementById("attendBtn");
 const leaveBtn = document.getElementById("leaveBtn");
 
-EMPLOYEES.forEach(name=>{
+employees.forEach(name=>{
   const opt = document.createElement("option");
-  opt.value=name;
-  opt.textContent=name;
+  opt.value = name;
+  opt.textContent = name;
   select.appendChild(opt);
 });
 
@@ -36,7 +36,11 @@ attendBtn.onclick = async ()=>{
     return;
   }
 
-  await setDoc(ref,{ attendAt: serverTimestamp(), leaveAt: null },{ merge:true });
+  await setDoc(ref,{
+    attendAt: serverTimestamp(),
+    leaveAt: null
+  },{merge:true});
+
   alert("Attendance recorded");
 };
 
@@ -57,7 +61,10 @@ leaveBtn.onclick = async ()=>{
     return;
   }
 
-  await updateDoc(ref,{ leaveAt: serverTimestamp() });
+  await updateDoc(ref,{
+    leaveAt: serverTimestamp()
+  });
+
   alert("Leave recorded");
 };
 
