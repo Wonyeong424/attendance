@@ -9,25 +9,25 @@ import {
   limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const list = document.getElementById("employeeList");
+const body = document.getElementById("attendanceBody");
 
 async function loadEmployees() {
-  list.innerHTML = "";
+  body.innerHTML = "";
 
-  const snap = await getDocs(collection(db, "employees"));
+  const empSnap = await getDocs(collection(db, "employees"));
 
-  snap.forEach(docSnap => {
-    const emp = docSnap.data();
-    if (emp.active === false) return;
+  for (const d of empSnap.docs) {
+    const emp = d.data();
+    if (!emp.active) continue;
 
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <strong>${emp.name}</strong>
-      <button data-attend="${docSnap.id}">Attend</button>
-      <button data-leave="${docSnap.id}">Leave</button>
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${emp.name}</td>
+      <td><button data-attend="${d.id}">Attend</button></td>
+      <td><button data-leave="${d.id}">Leave</button></td>
     `;
-    list.appendChild(li);
-  });
+    body.appendChild(tr);
+  }
 }
 
 async function record(type, employeeId, name) {
@@ -40,7 +40,6 @@ async function record(type, employeeId, name) {
 
   const snap = await getDocs(q);
 
-  // 🔒 Prevent duplicate actions
   if (!snap.empty && snap.docs[0].data().type === type) {
     alert(
       type === "attend"
@@ -53,7 +52,7 @@ async function record(type, employeeId, name) {
   await addDoc(collection(db, "attendance"), {
     employeeId,
     name,
-    type, // "attend" | "leave"
+    type,
     timestamp: new Date()
   });
 
@@ -64,13 +63,12 @@ async function record(type, employeeId, name) {
   );
 }
 
-list.addEventListener("click", async e => {
+body.addEventListener("click", async e => {
   const attendId = e.target.dataset.attend;
   const leaveId = e.target.dataset.leave;
-
   if (!attendId && !leaveId) return;
 
-  const name = e.target.parentElement.querySelector("strong").textContent;
+  const name = e.target.closest("tr").children[0].textContent;
 
   if (attendId) await record("attend", attendId, name);
   if (leaveId) await record("leave", leaveId, name);

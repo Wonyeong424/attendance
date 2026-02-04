@@ -7,51 +7,27 @@ import {
   doc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-/**
- * 🔹 초기 직원 목록
- * (Firestore에 없을 때만 한 번 생성)
- */
-const INITIAL_EMPLOYEES = [
-  "Kiran Barthwal",
-  "Jeenat Khan",
-  "Rohin Dixit",
-  "Kamal Hassain",
-  "Sudarla",
-  "Jakir",
-  "Sam Lee"
-];
-
-const list = document.getElementById("empList");
+const body = document.getElementById("empBody");
 const addBtn = document.getElementById("addBtn");
 const newName = document.getElementById("newName");
 
-async function seedEmployeesIfEmpty() {
-  const snap = await getDocs(collection(db, "employees"));
-  if (!snap.empty) return;
-
-  for (const name of INITIAL_EMPLOYEES) {
-    await addDoc(collection(db, "employees"), {
-      name,
-      active: true,
-      createdAt: new Date()
-    });
-  }
-}
-
 async function loadEmployees() {
-  list.innerHTML = "";
+  body.innerHTML = "";
   const snap = await getDocs(collection(db, "employees"));
 
   snap.forEach(d => {
     const emp = d.data();
+    const tr = document.createElement("tr");
 
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <strong>${emp.name}</strong>
-      (${emp.active ? "Active" : "Inactive"})
-      ${emp.active ? `<button data-id="${d.id}">Deactivate</button>` : ""}
+    tr.innerHTML = `
+      <td>${emp.name}</td>
+      <td>${emp.active ? "Active" : "Inactive"}</td>
+      <td>
+        ${emp.active ? `<button data-id="${d.id}">Deactivate</button>` : ""}
+      </td>
     `;
-    list.appendChild(li);
+
+    body.appendChild(tr);
   });
 }
 
@@ -68,7 +44,7 @@ addBtn.onclick = async () => {
   loadEmployees();
 };
 
-list.addEventListener("click", async e => {
+body.addEventListener("click", async e => {
   const id = e.target.dataset.id;
   if (!id) return;
 
@@ -79,7 +55,5 @@ list.addEventListener("click", async e => {
   loadEmployees();
 });
 
-// 최초 실행
-await seedEmployeesIfEmpty();
 loadEmployees();
 

@@ -1,17 +1,68 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>Admin</title>
+
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+    }
+
+    aside {
+      width: 220px;
+      background: #1e272e;
+      color: white;
+      padding: 20px;
+    }
+
+    main {
+      flex: 1;
+      padding: 30px;
+      background: #f5f6fa;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+  </style>
 </head>
+
 <body>
 
-<h2>Employee Management</h2>
+<aside>
+  <h2>Admin</h2>
+  <div>Employees</div>
+</aside>
 
-<input id="newName" placeholder="Employee name" />
-<button id="addBtn">Add Employee</button>
+<main>
+  <h2>Employee Management</h2>
 
-<ul id="empList"></ul>
+  <input id="newName" placeholder="Employee name" />
+  <button id="addBtn">Add</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="empBody"></tbody>
+  </table>
+</main>
 
 <script type="module" src="admin.js"></script>
 </body>
