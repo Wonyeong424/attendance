@@ -1,111 +1,85 @@
-import { db, getTodayKey } from "./firebase.js";
+import { db } from "./firebase.js";
 import {
-  doc, getDoc, getDocs, setDoc, updateDoc,
-  collection
+  collection,
+  addDoc,
+  getDocs,
+  updateDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+/**
+ * 🔹 초기 직원 목록
+ * (Firestore에 없을 때만 한 번 생성)
+ */
+const INITIAL_EMPLOYEES = [
+  "Kiran Barthwal",
+  "Jeenat Khan",
+  "Rohin Dixit",
+  "Kamal Hassain",
+  "Sudarla",
+  "Jakir",
+  "Sam Lee"
+];
 
-  const ADMIN_PIN = "0317";
+const list = document.getElementById("empList");
+const addBtn = document.getElementById("addBtn");
+const newName = document.getElementById("newName");
 
-  /* PIN */
-  pinBtn.onclick = () => {
-    if (pinInput.value === ADMIN_PIN) {
-      pinSection.style.display = "none";
-      adminSection.style.display = "block";
-      loadEmployees();
-      loadTodayAttendance();
-    } else {
-      pinError.textContent = "Wrong PIN";
-    }
-  };
+async function seedEmployeesIfEmpty() {
+  const snap = await getDocs(collection(db, "employees"));
+  if (!snap.empty) return;
 
-  /* Sidebar navigation */
-  document.querySelectorAll(".sidebar button").forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll(".sidebar button")
-        .forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
+  for (const name of INITIAL_EMPLOYEES) {
+    await addDoc(collection(db, "employees"), {
+      name,
+      active: true,
+      createdAt: new Date()
+    });
+  }
+}
 
-      document.querySelectorAll(".view")
-        .forEach(v => v.style.display = "none");
-      document.getElementById(btn.dataset.view).style.display = "block";
-    };
+async function loadEmployees() {
+  list.innerHTML = "";
+  const snap = await getDocs(collection(db, "employees"));
+
+  snap.forEach(d => {
+    const emp = d.data();
+
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <strong>${emp.name}</strong>
+      (${emp.active ? "Active" : "Inactive"})
+      ${emp.active ? `<button data-id="${d.id}">Deactivate</button>` : ""}
+    `;
+    list.appendChild(li);
+  });
+}
+
+addBtn.onclick = async () => {
+  if (!newName.value.trim()) return;
+
+  await addDoc(collection(db, "employees"), {
+    name: newName.value.trim(),
+    active: true,
+    createdAt: new Date()
   });
 
-  /* 직원 로드 */
-  async function loadEmployees() {
-    employeeTable.innerHTML = "";
-    const snap = await getDocs(collection(db, "employees"));
+  newName.value = "";
+  loadEmployees();
+};
 
-    snap.forEach(d => {
-      employeeTable.innerHTML += `
-        <tr>
-          <td>${d.id}</td>
-          <td>${d.data().active ? "Active" : "Inactive"}</td>
-          <td>
-            <button onclick="toggleEmployee('${d.id}', ${d.data().active})">
-              ${d.data().active ? "Deactivate" : "Activate"}
-            </button>
-          </td>
-        </tr>
-      `;
-    });
-  }
+list.addEventListener("click", async e => {
+  const id = e.target.dataset.id;
+  if (!id) return;
 
-  addEmployeeBtn.onclick = async () => {
-    const name = newEmployeeName.value.trim();
-    if (!name) return;
+  await updateDoc(doc(db, "employees", id), {
+    active: false
+  });
 
-    await setDoc(doc(db, "employees", name), {
-      active: true,
-      joinedAt: new Date().toISOString()
-    });
-
-    newEmployeeName.value = "";
-    loadEmployees();
-    loadTodayAttendance();
-  };
-
-  window.toggleEmployee = async (name, active) => {
-    await updateDoc(doc(db, "employees", name), { active: !active });
-    loadEmployees();
-    loadTodayAttendance();
-  };
-
-  /* 오늘 출석 */
-  async function loadTodayAttendance() {
-    const todayKey = getTodayKey();
-    title.textContent = `Today's Attendance (${todayKey})`;
-    attendanceTable.innerHTML = "";
-
-    const empSnap = await getDocs(collection(db, "employees"));
-    for (const emp of empSnap.docs) {
-      if (!emp.data().active) continue;
-
-      const snap = await getDoc(
-        doc(db, "attendance", todayKey, "users", emp.id)
-      );
-
-      attendanceTable.innerHTML += `
-        <tr>
-          <td>${emp.id}</td>
-          <td>${snap.data()?.attend || "-"}</td>
-          <td>${snap.data()?.leave || "-"}</td>
-        </tr>
-      `;
-    }
-  }
-
-  /* History */
-  async function loadHistory() {
-    historyContainer.innerHTML = "";
-    const snap = await getDocs(collection(db, "attendance"));
-
-    snap.forEach(d => {
-      historyContainer.innerHTML += `<p>${d.id}</p>`;
-    });
-  }
-
+  loadEmployees();
 });
+
+// 최초 실행
+await seedEmployeesIfEmpty();
+loadEmployees();
 

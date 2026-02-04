@@ -1,46 +1,80 @@
-// script.js
-import { db, getTodayKey } from "./firebase.js";
-import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { db } from "./firebase.js";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  limit
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-window.Attend = async function() {
-  const name = document.getElementById("nameSelect").value;
-  if (!name) { alert("Please select your name."); return; }
+const list = document.getElementById("employeeList");
 
-  const todayKey = getTodayKey();
-  const docRef = doc(db, "attendance", todayKey, "users", name);
-  const snapshot = await getDoc(docRef);
+async function loadEmployees() {
+  list.innerHTML = "";
 
-  if (snapshot.exists() && snapshot.data().attend) {
-    alert("You have already attended today.");
+  const snap = await getDocs(collection(db, "employees"));
+
+  snap.forEach(docSnap => {
+    const emp = docSnap.data();
+    if (emp.active === false) return;
+
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <strong>${emp.name}</strong>
+      <button data-attend="${docSnap.id}">Attend</button>
+      <button data-leave="${docSnap.id}">Leave</button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+async function record(type, employeeId, name) {
+  const q = query(
+    collection(db, "attendance"),
+    where("employeeId", "==", employeeId),
+    orderBy("timestamp", "desc"),
+    limit(1)
+  );
+
+  const snap = await getDocs(q);
+
+  // 🔒 Prevent duplicate actions
+  if (!snap.empty && snap.docs[0].data().type === type) {
+    alert(
+      type === "attend"
+        ? "This employee has already attended."
+        : "This employee has already left."
+    );
     return;
   }
 
-  await setDoc(docRef, {
-    name: name,
-    attend: new Date().toLocaleTimeString(),
-    leave: "" // 초기값
+  await addDoc(collection(db, "attendance"), {
+    employeeId,
+    name,
+    type, // "attend" | "leave"
+    timestamp: new Date()
   });
 
-  alert("Attendance recorded!");
-};
+  alert(
+    type === "attend"
+      ? `${name} has successfully attended.`
+      : `${name} has successfully left.`
+  );
+}
 
-window.Leave = async function() {
-  const name = document.getElementById("nameSelect").value;
-  if (!name) { alert("Please select your name."); return; }
+list.addEventListener("click", async e => {
+  const attendId = e.target.dataset.attend;
+  const leaveId = e.target.dataset.leave;
 
-  const todayKey = getTodayKey();
-  const docRef = doc(db, "attendance", todayKey, "users", name);
-  const snapshot = await getDoc(docRef);
+  if (!attendId && !leaveId) return;
 
-  if (!snapshot.exists() || !snapshot.data().attend) {
-    alert("You have not attended yet today.");
-    return;
-  }
+  const name = e.target.parentElement.querySelector("strong").textContent;
 
-  await setDoc(docRef, {
-    leave: new Date().toLocaleTimeString()
-  }, { merge: true });
+  if (attendId) await record("attend", attendId, name);
+  if (leaveId) await record("leave", leaveId, name);
+});
 
-  alert("Leave recorded!");
-};
+loadEmployees();
 

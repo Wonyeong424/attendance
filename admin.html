@@ -2,160 +2,16 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>Attendance Admin</title>
-
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f6f7f9;
-    }
-
-    .layout {
-      display: flex;
-      height: 100vh;
-    }
-
-    /* Sidebar */
-    .sidebar {
-      width: 220px;
-      background: #1f2937;
-      color: #fff;
-      padding: 20px;
-    }
-
-    .sidebar h2 {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-
-    .sidebar button {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
-      background: #374151;
-      border: none;
-      color: #fff;
-      text-align: left;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-
-    .sidebar button.active {
-      background: #2563eb;
-    }
-
-    /* Main */
-    .main {
-      flex: 1;
-      padding: 30px;
-      overflow-y: auto;
-    }
-
-    .card {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      margin-bottom: 20px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      font-size: 14px;
-    }
-
-    th {
-      background: #f0f0f0;
-    }
-
-    input, button {
-      padding: 6px 10px;
-      font-size: 14px;
-    }
-  </style>
+  <title>Admin</title>
 </head>
-
 <body>
 
-<!-- PIN -->
-<div id="pinSection" class="card" style="max-width:400px;margin:100px auto;">
-  <h2>Admin Access</h2>
-  <input type="password" id="pinInput" placeholder="Enter PIN" />
-  <button id="pinBtn">Enter</button>
-  <p id="pinError" style="color:red;"></p>
-</div>
+<h2>Employee Management</h2>
 
-<!-- Admin -->
-<div id="adminSection" style="display:none;">
-  <div class="layout">
+<input id="newName" placeholder="Employee name" />
+<button id="addBtn">Add Employee</button>
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <h2>Admin</h2>
-      <button data-view="today" class="active">Today</button>
-      <button data-view="history">History</button>
-      <button data-view="employees">Employees</button>
-    </div>
-
-    <!-- Main -->
-    <div class="main">
-
-      <!-- Today -->
-      <div id="today" class="view">
-        <div class="card">
-          <h2 id="title"></h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Check-in</th>
-                <th>Check-out</th>
-              </tr>
-            </thead>
-            <tbody id="attendanceTable"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- History -->
-      <div id="history" class="view" style="display:none;">
-        <div class="card">
-          <h2>History</h2>
-          <div id="historyContainer"></div>
-        </div>
-      </div>
-
-      <!-- Employees -->
-      <div id="employees" class="view" style="display:none;">
-        <div class="card">
-          <h2>Employee Management</h2>
-          <input id="newEmployeeName" placeholder="Employee name" />
-          <button id="addEmployeeBtn">Add</button>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="employeeTable"></tbody>
-          </table>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
+<ul id="empList"></ul>
 
 <script type="module" src="admin.js"></script>
 </body>
