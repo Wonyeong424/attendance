@@ -1,161 +1,111 @@
-console.log("🔥 admin.js loaded");
-
 import { db, getTodayKey } from "./firebase.js";
 import {
-  doc,
-  getDoc,
-  collection,
-  getDocs
+  doc, getDoc, getDocs, setDoc, updateDoc,
+  collection
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 document.addEventListener("DOMContentLoaded", () => {
 
   const ADMIN_PIN = "0317";
 
-  const EMPLOYEES = [
-    "Jakir",
-    "Jeenat Khan",
-    "Kamal Hassain",
-    "Kiran Barthwal",
-    "Robin Dixit",
-    "Sam Lee",
-    "Sudarla"
-  ];
-
-  /*****************
-   * 🔐 어떤 시간 문자열이 와도 안전한 포맷
-   *****************/
-  function formatTime(timeStr) {
-    if (!timeStr || timeStr === "-") return "-";
-
-    // 숫자만 추출 (예: 2026-02-04T13:25:44 → [13,25,44])
-    const nums = timeStr.match(/\d+/g);
-    if (!nums || nums.length < 2) return "-";
-
-    const h = Number(nums[nums.length >= 3 ? nums.length - 3 : 0]);
-    const m = Number(nums[nums.length - 2]);
-
-    if (isNaN(h) || isNaN(m)) return "-";
-
-    const period = h < 12 ? "오전" : "오후";
-    const hour12 = h % 12 === 0 ? 12 : h % 12;
-
-    return `${period} ${hour12}시 ${m.toString().padStart(2, "0")}분`;
-  }
-
-  const pinBtn = document.getElementById("pinBtn");
-  const pinInput = document.getElementById("pinInput");
-  const pinError = document.getElementById("pinError");
-  const pinSection = document.getElementById("pinSection");
-  const adminSection = document.getElementById("adminSection");
-
-  pinBtn.addEventListener("click", checkPin);
-  pinInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") checkPin();
-  });
-
-  function checkPin() {
+  /* PIN */
+  pinBtn.onclick = () => {
     if (pinInput.value === ADMIN_PIN) {
       pinSection.style.display = "none";
       adminSection.style.display = "block";
+      loadEmployees();
       loadTodayAttendance();
     } else {
-      pinError.textContent = "PIN이 올바르지 않습니다.";
+      pinError.textContent = "Wrong PIN";
     }
+  };
+
+  /* Sidebar navigation */
+  document.querySelectorAll(".sidebar button").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".sidebar button")
+        .forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      document.querySelectorAll(".view")
+        .forEach(v => v.style.display = "none");
+      document.getElementById(btn.dataset.view).style.display = "block";
+    };
+  });
+
+  /* 직원 로드 */
+  async function loadEmployees() {
+    employeeTable.innerHTML = "";
+    const snap = await getDocs(collection(db, "employees"));
+
+    snap.forEach(d => {
+      employeeTable.innerHTML += `
+        <tr>
+          <td>${d.id}</td>
+          <td>${d.data().active ? "Active" : "Inactive"}</td>
+          <td>
+            <button onclick="toggleEmployee('${d.id}', ${d.data().active})">
+              ${d.data().active ? "Deactivate" : "Activate"}
+            </button>
+          </td>
+        </tr>
+      `;
+    });
   }
 
+  addEmployeeBtn.onclick = async () => {
+    const name = newEmployeeName.value.trim();
+    if (!name) return;
+
+    await setDoc(doc(db, "employees", name), {
+      active: true,
+      joinedAt: new Date().toISOString()
+    });
+
+    newEmployeeName.value = "";
+    loadEmployees();
+    loadTodayAttendance();
+  };
+
+  window.toggleEmployee = async (name, active) => {
+    await updateDoc(doc(db, "employees", name), { active: !active });
+    loadEmployees();
+    loadTodayAttendance();
+  };
+
+  /* 오늘 출석 */
   async function loadTodayAttendance() {
     const todayKey = getTodayKey();
-    document.getElementById("title").textContent =
-      `Today's Attendance (${todayKey})`;
+    title.textContent = `Today's Attendance (${todayKey})`;
+    attendanceTable.innerHTML = "";
 
-    const tbody = document.getElementById("attendanceTable");
-    tbody.innerHTML = "";
+    const empSnap = await getDocs(collection(db, "employees"));
+    for (const emp of empSnap.docs) {
+      if (!emp.data().active) continue;
 
-    for (const name of EMPLOYEES) {
-      const ref = doc(db, "attendance", todayKey, "users", name);
-      const snap = await getDoc(ref);
+      const snap = await getDoc(
+        doc(db, "attendance", todayKey, "users", emp.id)
+      );
 
-      const attend = snap.exists() && snap.data().attend
-        ? formatTime(snap.data().attend)
-        : "-";
-
-      const leave = snap.exists() && snap.data().leave
-        ? formatTime(snap.data().leave)
-        : "-";
-
-      tbody.innerHTML += `
+      attendanceTable.innerHTML += `
         <tr>
-          <td>${name}</td>
-          <td>${attend}</td>
-          <td>${leave}</td>
+          <td>${emp.id}</td>
+          <td>${snap.data()?.attend || "-"}</td>
+          <td>${snap.data()?.leave || "-"}</td>
         </tr>
       `;
     }
   }
 
-  const toggleBtn = document.getElementById("toggleHistory");
-  const historySection = document.getElementById("historySection");
-  let historyLoaded = false;
-
-  toggleBtn.addEventListener("click", async () => {
-    const open = historySection.style.display === "block";
-    historySection.style.display = open ? "none" : "block";
-    toggleBtn.textContent = open ? "View more ▼" : "Hide ▲";
-
-    if (!historyLoaded) {
-      await loadHistory();
-      historyLoaded = true;
-    }
-  });
-
+  /* History */
   async function loadHistory() {
-    const todayKey = getTodayKey();
-    const container = document.getElementById("historyContainer");
-    container.innerHTML = "";
-
+    historyContainer.innerHTML = "";
     const snap = await getDocs(collection(db, "attendance"));
-    const dates = snap.docs
-      .map(d => d.id)
-      .filter(d => d !== todayKey)
-      .sort((a, b) => b.localeCompare(a));
 
-    for (const date of dates) {
-      let html = `
-        <div class="history-day">
-          <h4>${date}</h4>
-          <table>
-            <tr>
-              <th>Name</th>
-              <th>Check-in</th>
-              <th>Check-out</th>
-            </tr>
-      `;
-
-      for (const name of EMPLOYEES) {
-        const ref = doc(db, "attendance", date, "users", name);
-        const snap = await getDoc(ref);
-
-        const attend = snap.exists() && snap.data().attend
-          ? formatTime(snap.data().attend)
-          : "-";
-
-        const leave = snap.exists() && snap.data().leave
-          ? formatTime(snap.data().leave)
-          : "-";
-
-        html += `
-          <tr>
-            <td>${name}</td>
-            <td>${attend}</td>
-            <td>${leave}</td>
-          </tr>
-        `;
-      }
-
-      html += "</table></div>";
-      container.innerHTML += html;
-    }
+    snap.forEach(d => {
+      historyContainer.innerHTML += `<p>${d.id}</p>`;
+    });
   }
+
 });
 
