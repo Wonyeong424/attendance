@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
 
   /*****************
-   * PIN 체크
+   * PIN 요소
    *****************/
   const pinBtn = document.getElementById("pinBtn");
   const pinInput = document.getElementById("pinInput");
@@ -37,7 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const pinSection = document.getElementById("pinSection");
   const adminSection = document.getElementById("adminSection");
 
-  pinBtn.addEventListener("click", () => {
+  pinBtn.addEventListener("click", checkPin);
+  pinInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") checkPin();
+  });
+
+  function checkPin() {
     if (pinInput.value === ADMIN_PIN) {
       pinSection.style.display = "none";
       adminSection.style.display = "block";
@@ -45,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       pinError.textContent = "PIN이 올바르지 않습니다.";
     }
-  });
+  }
 
   /*****************
    * 오늘 출석
@@ -56,8 +61,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("title").textContent =
       `Today's Attendance (${todayKey})`;
 
-    const table = document.getElementById("attendanceTable");
-    table.innerHTML = "";
+    const tbody = document.getElementById("attendanceTable");
+    tbody.innerHTML = "";
 
     for (const name of EMPLOYEES) {
       const ref = doc(db, "attendance", todayKey, "users", name);
@@ -66,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const attend = snap.exists() && snap.data().attend ? snap.data().attend : "-";
       const leave  = snap.exists() && snap.data().leave  ? snap.data().leave  : "-";
 
-      table.innerHTML += `
+      tbody.innerHTML += `
         <tr>
           <td>${name}</td>
           <td>${attend}</td>

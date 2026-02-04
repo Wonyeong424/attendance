@@ -15,7 +15,6 @@
       margin-bottom: 10px;
     }
 
-    /* 카드 느낌 */
     .card {
       background: #fff;
       padding: 20px;
@@ -33,7 +32,6 @@
       cursor: pointer;
     }
 
-    /* 테이블 (엑셀 친화적) */
     table {
       border-collapse: collapse;
       width: 100%;
@@ -51,17 +49,8 @@
       background: #f0f0f0;
     }
 
-    .status-yes {
-      color: green;
-      font-weight: bold;
-    }
-
-    .status-no {
-      color: #999;
-    }
-
-    #toggle-history {
-      margin-top: 10px;
+    .history-day {
+      margin-bottom: 20px;
     }
   </style>
 </head>
@@ -69,50 +58,39 @@
 <body>
 
   <!-- PIN 입력 -->
-  <div id="pin-section" class="card">
+  <div id="pinSection" class="card">
     <h2>Admin Access</h2>
-    <input type="password" id="pin-input" placeholder="Enter PIN" />
-    <button id="pin-btn">Enter</button>
-    <p id="pin-error" style="color:red;"></p>
+    <input type="password" id="pinInput" placeholder="Enter PIN" />
+    <button id="pinBtn">Enter</button>
+    <p id="pinError" style="color:red;"></p>
   </div>
 
   <!-- 관리자 화면 -->
-  <div id="admin-section" class="card" style="display:none;">
-    <h2>Today Attendance</h2>
+  <div id="adminSection" class="card" style="display:none;">
+    <h2 id="title">Today's Attendance</h2>
 
-    <table id="today-table">
+    <table>
       <thead>
         <tr>
           <th>Name</th>
-          <th>Check-in Time</th>
+          <th>Check-in</th>
+          <th>Check-out</th>
         </tr>
       </thead>
-      <tbody id="today-list">
+      <tbody id="attendanceTable">
         <!-- JS로 채워짐 -->
       </tbody>
     </table>
 
-    <button id="toggle-history">View more ▼</button>
+    <button id="toggleHistory" style="margin-top:10px;">View more ▼</button>
 
-    <div id="history-section" style="display:none;">
+    <div id="historySection" style="display:none; margin-top:20px;">
       <h2>History</h2>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Name</th>
-            <th>Check-in Time</th>
-          </tr>
-        </thead>
-        <tbody id="history-list">
-          <!-- JS로 채워짐 -->
-        </tbody>
-      </table>
+      <div id="historyContainer"></div>
     </div>
   </div>
 
-  <!-- ⚠️ module 유지 -->
+  <!-- module 유지 -->
   <script type="module" src="admin.js"></script>
 </body>
 </html>
