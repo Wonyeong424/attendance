@@ -2,43 +2,131 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Admin</title>
+<title>Admin Panel</title>
+
 <script type="module" src="firebase.js"></script>
 <script type="module" src="admin.js"></script>
+
 <style>
-body { margin:0; font-family:system-ui; display:flex; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system;
+  background: #f4f6f9;
+}
+
+/* ===== 로그인 ===== */
+#login {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 300px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.1);
+}
+
+.login-box input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.login-box button {
+  width: 100%;
+  margin-top: 15px;
+  padding: 10px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+}
+
+/* ===== 관리자 ===== */
+#admin {
+  display: none;
+  height: 100vh;
+}
+
 .sidebar {
-  width:220px; background:#1f2937; color:white; padding:20px;
+  width: 230px;
+  background: #111827;
+  color: white;
+  padding: 20px;
 }
+
+.sidebar h2 {
+  margin-bottom: 20px;
+}
+
 .sidebar button {
-  width:100%; margin-bottom:10px; padding:10px;
-  background:none; border:1px solid #444; color:white;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px;
+  background: #1f2937;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
 }
-.content { flex:1; padding:20px; background:#f5f7fa; }
-table { width:100%; border-collapse: collapse; }
-th,td { padding:10px; border-bottom:1px solid #ddd; }
+
+.main {
+  flex: 1;
+  padding: 25px;
+  overflow-y: auto;
+}
+
+.hidden { display: none; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
 </style>
 </head>
+
 <body>
 
-<div class="sidebar">
-  <h3>Admin</h3>
-  <button onclick="show('today')">Today</button>
-  <button onclick="show('history')">History</button>
-  <button onclick="show('staff')">Staff</button>
+<!-- 로그인 -->
+<div id="login">
+  <div class="login-box">
+    <h3>Admin Login</h3>
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Enter</button>
+  </div>
 </div>
 
-<div class="content">
-  <div id="today"></div>
-  <div id="history" style="display:none"></div>
-  <div id="staff" style="display:none"></div>
+<!-- 관리자 -->
+<div id="admin">
+  <div class="sidebar">
+    <h2>Admin</h2>
+    <button onclick="showTab('today')">Today</button>
+    <button onclick="showTab('history')">History</button>
+    <button onclick="showTab('staff')">Staff</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div class="main">
+    <div id="today"></div>
+    <div id="history" class="hidden"></div>
+    <div id="staff" class="hidden"></div>
+  </div>
 </div>
 
 <script>
-function show(id){
-  document.querySelectorAll('.content > div')
-    .forEach(d=>d.style.display='none');
-  document.getElementById(id).style.display='block';
+function showTab(id) {
+  document.querySelectorAll('.main > div').forEach(d => d.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
 }
 </script>
 
