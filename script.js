@@ -1,8 +1,13 @@
 import { db } from "./firebase.js";
 import {
-  collection, getDocs, doc, getDoc, setDoc
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* ===== UTIL ===== */
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -11,11 +16,12 @@ function formatTime() {
   const d = new Date();
   let h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, "0");
-  const pm = h >= 12;
+  const isPM = h >= 12;
   h = h % 12 || 12;
-  return `${pm ? "PM" : "AM"} ${h}:${m}`;
+  return `${isPM ? "PM" : "AM"} ${h}:${m}`;
 }
 
+/* ===== MAIN ===== */
 const tbody = document.getElementById("attendance-list");
 const today = todayKey();
 
@@ -27,19 +33,36 @@ for (const emp of empSnap.docs) {
   const name = emp.id;
   const ref = doc(db, "attendance", today, "records", name);
   const snap = await getDoc(ref);
-  const data = snap.exists() ? snap.data() : {};
+  const record = snap.exists() ? snap.data() : {};
 
   const tr = document.createElement("tr");
+
   tr.innerHTML = `
     <td>${name}</td>
-    <td>${data.attend ?? `<button>Attend</button>`}</td>
-    <td>${data.leave ?? `<button>Leave</button>`}</td>
+    <td>
+      ${
+        record.attend
+          ? `<span class="status">${record.attend}</span>`
+          : `<button class="attend">Attend</button>`
+      }
+    </td>
+    <td>
+      ${
+        record.leave
+          ? `<span class="status">${record.leave}</span>`
+          : `<button class="leave">Leave</button>`
+      }
+    </td>
   `;
 
   tr.querySelectorAll("button").forEach(btn => {
     btn.onclick = async () => {
       const type = btn.textContent.toLowerCase();
-      if (data[type]) return alert(`Already ${type}ed`);
+
+      if (record[type]) {
+        alert(`Already ${type}ed`);
+        return;
+      }
 
       await setDoc(ref, { [type]: formatTime() }, { merge: true });
       location.reload();

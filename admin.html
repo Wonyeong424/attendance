@@ -2,40 +2,160 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Admin</title>
+<title>Attendance Admin</title>
+
 <style>
-body { display:flex; font-family:Arial }
-aside { width:200px; background:#f0f0f0; padding:10px }
-main { flex:1; padding:20px }
-button { display:block; width:100%; margin-bottom:8px }
-table { width:100%; border-collapse:collapse }
-th,td { border:1px solid #ccc; padding:6px }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f6f8;
+}
+
+/* ===== PIN ===== */
+#pin-box {
+  max-width: 320px;
+  margin: 120px auto;
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+#pin-box input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+#pin-box button {
+  width: 100%;
+  padding: 10px;
+}
+
+/* ===== LAYOUT ===== */
+#admin-app {
+  display: flex;
+  height: 100vh;
+}
+
+/* ===== SIDEBAR ===== */
+aside {
+  width: 220px;
+  background: #1f2937;
+  color: #fff;
+  padding: 20px 10px;
+  transition: width 0.3s;
+}
+aside.collapsed {
+  width: 60px;
+}
+aside h3 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+aside ul {
+  list-style: none;
+  padding: 0;
+}
+aside li {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+aside li:hover,
+aside li.active {
+  background: #374151;
+}
+aside .toggle {
+  text-align: center;
+  margin-top: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* ===== MAIN ===== */
+main {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+/* ===== TABLE ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+th, td {
+  border: 1px solid #e5e7eb;
+  padding: 10px;
+  font-size: 14px;
+}
+th {
+  background: #f3f4f6;
+  text-align: left;
+}
+
+/* ===== EMPLOYEE ===== */
+.employee-row {
+  display: flex;
+  justify-content: space-between;
+  background: white;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+}
+
+button.danger {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+button.add {
+  padding: 8px 12px;
+  margin-left: 6px;
+}
 </style>
 </head>
 
 <body>
 
+<!-- PIN -->
 <div id="pin-box">
-  <h3>Admin Login</h3>
-  <input id="pinInput" type="password" placeholder="PIN">
-  <button onclick="login()">Enter</button>
+  <h3>Admin Access</h3>
+  <input id="pinInput" type="password" placeholder="Enter PIN">
+  <button onclick="login()">Login</button>
 </div>
 
+<!-- ADMIN -->
 <div id="admin-app" style="display:none">
-<aside>
-  <button onclick="showTab('today')">Today</button>
-  <button onclick="showTab('history')">History</button>
-  <button onclick="showTab('employees')">Employees</button>
-</aside>
 
-<main>
-  <div id="today"></div>
-  <div id="history" style="display:none"></div>
-  <div id="employees" style="display:none"></div>
-</main>
+  <aside id="sidebar">
+    <h3>ADMIN</h3>
+    <ul>
+      <li class="active" onclick="openTab('today', this)">Today</li>
+      <li onclick="openTab('history', this)">History</li>
+      <li onclick="openTab('employees', this)">Employees</li>
+    </ul>
+    <div class="toggle" onclick="toggleSidebar()">◀ Collapse</div>
+  </aside>
+
+  <main>
+    <div id="today"></div>
+    <div id="history" style="display:none"></div>
+    <div id="employees" style="display:none"></div>
+  </main>
+
 </div>
 
 <script type="module" src="admin.js"></script>
 </body>
 </html>
-
