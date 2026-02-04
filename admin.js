@@ -10,14 +10,8 @@ import {
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  /*****************
-   * 관리자 PIN
-   *****************/
   const ADMIN_PIN = "0317";
 
-  /*****************
-   * 직원 이름 리스트 (고정)
-   *****************/
   const EMPLOYEES = [
     "Jakir",
     "Jeenat Khan",
@@ -29,22 +23,26 @@ document.addEventListener("DOMContentLoaded", () => {
   ];
 
   /*****************
-   * 시간 포맷 함수
-   * HH:MM → 오전/오후 X시 XX분
+   * 🔐 어떤 시간 문자열이 와도 안전한 포맷
    *****************/
   function formatTime(timeStr) {
     if (!timeStr || timeStr === "-") return "-";
 
-    const [h, m] = timeStr.split(":").map(Number);
-    const period = h < 12 ? "오전" : "오후";
-    const hour = h % 12 === 0 ? 12 : h % 12;
+    // 숫자만 추출 (예: 2026-02-04T13:25:44 → [13,25,44])
+    const nums = timeStr.match(/\d+/g);
+    if (!nums || nums.length < 2) return "-";
 
-    return `${period} ${hour}시 ${m.toString().padStart(2, "0")}분`;
+    const h = Number(nums[nums.length >= 3 ? nums.length - 3 : 0]);
+    const m = Number(nums[nums.length - 2]);
+
+    if (isNaN(h) || isNaN(m)) return "-";
+
+    const period = h < 12 ? "오전" : "오후";
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+
+    return `${period} ${hour12}시 ${m.toString().padStart(2, "0")}분`;
   }
 
-  /*****************
-   * PIN 요소
-   *****************/
   const pinBtn = document.getElementById("pinBtn");
   const pinInput = document.getElementById("pinInput");
   const pinError = document.getElementById("pinError");
@@ -66,12 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /*****************
-   * 오늘 출석 로드
-   *****************/
   async function loadTodayAttendance() {
     const todayKey = getTodayKey();
-
     document.getElementById("title").textContent =
       `Today's Attendance (${todayKey})`;
 
@@ -100,9 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /*****************
-   * History 토글
-   *****************/
   const toggleBtn = document.getElementById("toggleHistory");
   const historySection = document.getElementById("historySection");
   let historyLoaded = false;
@@ -118,16 +109,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  /*****************
-   * History 로드
-   *****************/
   async function loadHistory() {
     const todayKey = getTodayKey();
     const container = document.getElementById("historyContainer");
     container.innerHTML = "";
 
     const snap = await getDocs(collection(db, "attendance"));
-
     const dates = snap.docs
       .map(d => d.id)
       .filter(d => d !== todayKey)
