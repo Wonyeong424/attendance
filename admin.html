@@ -2,93 +2,363 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Admin</title>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f6f7f9;
-      padding: 30px;
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --line2: #d1d5db;
+      --shadow: 0 12px 30px rgba(17, 24, 39, 0.08);
+      --radius: 16px;
+      --radius-sm: 12px;
+      --sidebar-w: 260px;
+      --focus: 0 0 0 4px rgba(59, 130, 246, 0.15);
     }
 
-    h2 {
-      margin-bottom: 10px;
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Pretendard, "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: #0b1220;
+      color: #e5e7eb;
+      padding: 20px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 6px 4px 12px;
+    }
+    .brand .title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: #fff;
+    }
+    .brand .sub {
+      font-size: 12px;
+      color: rgba(229,231,235,0.7);
+      line-height: 1.3;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .nav button {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.06s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+    .nav button:hover {
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.18);
+    }
+    .nav button:active { transform: translateY(1px); }
+    .nav button:focus { outline: none; box-shadow: var(--focus); }
+
+    .sidebar .hint {
+      margin-top: auto;
+      font-size: 12px;
+      color: rgba(229,231,235,0.65);
+      line-height: 1.4;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 14px;
+    }
+
+    /* Main */
+    .main {
+      padding: 28px 28px 40px;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+    }
+
+    .header .meta {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 6px;
     }
 
     .card {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      margin-bottom: 20px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
     }
 
-    input, button {
-      padding: 8px 12px;
-      font-size: 14px;
-    }
+    .card + .card { margin-top: 16px; }
 
-    button {
-      cursor: pointer;
-    }
-
-    table {
-      border-collapse: collapse;
-      width: 100%;
+    /* PIN card */
+    .pin-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
       margin-top: 10px;
     }
 
+    input[type="password"] {
+      border: 1px solid var(--line2);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      min-width: 220px;
+      background: #fff;
+    }
+    input[type="password"]:focus {
+      outline: none;
+      box-shadow: var(--focus);
+      border-color: rgba(59,130,246,0.5);
+    }
+
+    .btn {
+      border: 1px solid var(--line2);
+      background: #111827;
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.06s ease, opacity 0.2s ease;
+    }
+    .btn:hover { opacity: 0.92; }
+    .btn:active { transform: translateY(1px); }
+    .btn:focus { outline: none; box-shadow: var(--focus); }
+
+    .btn.secondary {
+      background: #fff;
+      color: #111827;
+    }
+
+    .error {
+      color: #dc2626;
+      margin: 10px 0 0;
+      font-size: 13px;
+    }
+
+    /* Table (Excel friendly: keep true <table>) */
+    .table-wrap {
+      width: 100%;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: #fff;
+    }
+
+    table {
+      border-collapse: collapse; /* Excel copy friendly */
+      width: 100%;
+      min-width: 520px;
+    }
+
     th, td {
-      border: 1px solid #ccc;
-      padding: 8px 10px;
+      border: 1px solid var(--line);
+      padding: 10px 12px;
       text-align: left;
       font-size: 14px;
+      white-space: nowrap;
     }
 
     th {
-      background: #f0f0f0;
+      background: #f3f4f6;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody tr:nth-child(even) td { background: #fafafa; }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 800;
     }
 
     .history-day {
-      margin-bottom: 20px;
+      margin-top: 14px;
+    }
+    .history-day h4 {
+      margin: 18px 0 10px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #111827;
+    }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar {
+        position: relative;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+      .main { padding: 18px; }
+      table { min-width: 520px; }
     }
   </style>
 </head>
 
 <body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="title">Attendance Admin</div>
+        <div class="sub">Clean dashboard • Excel-friendly tables</div>
+      </div>
 
-  <!-- PIN 입력 -->
-  <div id="pinSection" class="card">
-    <h2>Admin Access</h2>
-    <input type="password" id="pinInput" placeholder="Enter PIN" />
-    <button id="pinBtn">Enter</button>
-    <p id="pinError" style="color:red;"></p>
-  </div>
+      <div class="nav">
+        <button id="navToday">📌 Today</button>
+        <button id="navHistory">🗂️ History</button>
+      </div>
 
-  <!-- 관리자 화면 -->
-  <div id="adminSection" class="card" style="display:none;">
-    <h2 id="title">Today's Attendance</h2>
+      <div class="hint">
+        • 테이블은 복사해서 엑셀에 붙여넣기 쉬운 형태로 유지됩니다.<br />
+        • History가 안 보이면 권한/Rules 문제일 수 있어요.
+      </div>
+    </aside>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Attend</th>
-          <th>Leave</th>
-        </tr>
-      </thead>
-      <tbody id="attendanceTable"></tbody>
-    </table>
+    <!-- Main -->
+    <main class="main">
+      <!-- PIN 입력 -->
+      <section id="pinSection" class="card">
+        <div class="header" style="margin-bottom: 6px;">
+          <div>
+            <h1>Admin Access</h1>
+            <div class="meta">관리자 PIN을 입력해 주세요.</div>
+          </div>
+        </div>
 
-    <button id="toggleHistory" style="margin-top:10px;">View more ▼</button>
+        <div class="pin-row">
+          <input type="password" id="pinInput" placeholder="Enter PIN" />
+          <button class="btn" id="pinBtn">Enter</button>
+        </div>
+        <p id="pinError" class="error"></p>
+      </section>
 
-    <div id="historySection" style="display:none; margin-top:20px;">
-      <h2>History</h2>
-      <div id="historyContainer"></div>
-    </div>
+      <!-- 관리자 화면 -->
+      <section id="adminSection" style="display:none;">
+        <div class="card">
+          <div class="header">
+            <div>
+              <h1 id="title">Today's Attendance</h1>
+              <div class="meta">Table format is kept for Excel compatibility.</div>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Attend</th>
+                  <th>Leave</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTable"></tbody>
+            </table>
+          </div>
+
+          <div class="actions">
+            <button class="btn secondary" id="toggleHistory">View more ▼</button>
+          </div>
+        </div>
+
+        <div id="historySection" class="card" style="display:none;">
+          <h2 class="section-title">History</h2>
+          <div id="historyContainer"></div>
+        </div>
+      </section>
+    </main>
   </div>
 
   <script type="module" src="admin.js"></script>
+
+  <!-- Sidebar buttons (admin.js 수정 없이 연결) -->
+  <script type="module">
+    const navToday = document.getElementById("navToday");
+    const navHistory = document.getElementById("navHistory");
+    const adminSection = document.getElementById("adminSection");
+    const toggleHistory = document.getElementById("toggleHistory");
+    const historySection = document.getElementById("historySection");
+
+    navToday.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    navHistory.addEventListener("click", () => {
+      // PIN 통과 후에만 동작
+      if (adminSection.style.display === "none") return;
+
+      // history가 닫혀있으면 토글 버튼으로 열기
+      const isOpen = historySection.style.display === "block";
+      if (!isOpen) toggleHistory.click();
+
+      // 열리고 난 뒤 위치로 스크롤
+      setTimeout(() => {
+        historySection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    });
+  </script>
 </body>
 </html>
 
