@@ -1,3 +1,5 @@
+console.log("🔥 admin.js loaded");
+
 import { db, getTodayKey } from "./firebase.js";
 import {
   doc,
