@@ -148,6 +148,7 @@ toggleBtn.addEventListener("click", async () => {
 
 /* ==============================
    📜 History
+   ✅ 변경: IST "오늘"도 History에 포함 (필터 제거)
 ================================ */
 
 async function loadHistory() {
@@ -158,10 +159,11 @@ async function loadHistory() {
   try {
     const snap = await getDocs(collection(db, "attendance"));
 
+    // ✅ 날짜 문서 ID만 추출 (YYYY-MM-DD)
+    // ✅ 변경: 오늘(todayKey)도 제외하지 않음
     const dates = snap.docs
       .map((d) => d.id)
       .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
-      .filter((d) => d !== todayKey)
       .sort((a, b) => b.localeCompare(a))
       .slice(0, 30);
 
@@ -173,9 +175,11 @@ async function loadHistory() {
     container.innerHTML = "";
 
     for (const date of dates) {
+      const isToday = date === todayKey;
+
       let html = `
         <div class="history-day">
-          <h4>${date}</h4>
+          <h4>${date}${isToday ? " (Today)" : ""}</h4>
           <table>
             <thead>
               <tr>
