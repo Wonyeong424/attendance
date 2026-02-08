@@ -154,6 +154,7 @@ toggleBtn.addEventListener("click", async () => {
 ================================ */
 
 async function loadHistory() {
+  
   const todayKey = getTodayKeyIST();
   const container = document.getElementById("historyContainer");
   container.innerHTML = "Loading...";
@@ -164,6 +165,11 @@ async function loadHistory() {
     console.log("📌 attendance doc count =", snap.size);
     console.log("📌 attendance doc ids =", snap.docs.map(d => d.id));
     console.log("📌 todayKeyIST =", todayKey);
+
+    const testRef = doc(db, "attendance", "2026-02-07");
+    const testSnap = await getDoc(testRef);
+    console.log("🧪 getDoc(attendance/2026-02-07) exists =", testSnap.exists());
+    console.log("🧪 getDoc data =", testSnap.exists() ? testSnap.data() : null);
 
 
     // ✅ 날짜 문서 ID만 추출 (YYYY-MM-DD)
