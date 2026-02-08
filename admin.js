@@ -158,6 +158,11 @@ async function loadHistory() {
 
   try {
     const snap = await getDocs(collection(db, "attendance"));
+    
+    console.log("📌 attendance doc count =", snap.size);
+    console.log("📌 attendance doc ids =", snap.docs.map(d => d.id));
+    console.log("📌 todayKeyIST =", todayKey);
+
 
     // ✅ 날짜 문서 ID만 추출 (YYYY-MM-DD)
     // ✅ 변경: 오늘(todayKey)도 제외하지 않음
