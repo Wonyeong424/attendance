@@ -12,8 +12,9 @@ const employees = [
   "Jeenat Khan",
   "Rohin Dixit",
   "Kamal Hassain",
-  "Sudarla",
-  "Jakir",
+  "Sundarlal",
+  "Jakir Hossain",
+  "Suvimal Saha",
   "Sam Lee",
 ];
 
