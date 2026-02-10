@@ -18,7 +18,7 @@ const employees = [
   "Sundarlal",
   "Jakir Hossain",
   "Suvimal Saha",
-  "Sam Lee",
+  "Sam Lee"
 ];
 
 /* ==============================
