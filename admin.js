@@ -10,7 +10,7 @@ console.log("🔥 admin.js loaded (IST production)");
 
 const ADMIN_PIN = "0317";
 
-const employees = [
+const EMPLOYEES = [
   "Kiran Barthwal",
   "Jeenat Khan",
   "Rohin Dixit",
@@ -18,7 +18,7 @@ const employees = [
   "Sundarlal",
   "Jakir Hossain",
   "Suvimal Saha",
-  "Sam Lee"
+  "Sam Lee",
 ];
 
 /* ==============================
