@@ -47,7 +47,11 @@ function confirmSelectedName(action, name) {
 
 async function ensureDayDocExists(dateKey) {
   const dayRef = doc(db, "attendance", dateKey);
-  await setDoc(dayRef, { date: dateKey, updatedAt: serverTimestamp() }, { merge: true });
+  await setDoc(
+    dayRef,
+    { date: dateKey, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
 }
 
 /* ==============================
@@ -68,19 +72,19 @@ const $todayKeyBadge = document.getElementById("todayKeyBadge");
 if ($todayKeyBadge) $todayKeyBadge.textContent = `Today (IST): ${getTodayKeyIST()}`;
 
 $sidebarToggle?.addEventListener("click", () => {
-  $sidebar.classList.toggle("is-collapsed");
+  $sidebar?.classList.toggle("is-collapsed");
 });
 
 function setActiveView(view) {
   const isAttendance = view === "attendance";
 
-  $viewAttendance.classList.toggle("is-active", isAttendance);
-  $viewHoliday.classList.toggle("is-active", !isAttendance);
+  $viewAttendance?.classList.toggle("is-active", isAttendance);
+  $viewHoliday?.classList.toggle("is-active", !isAttendance);
 
-  $navAttendance.classList.toggle("is-active", isAttendance);
-  $navHoliday.classList.toggle("is-active", !isAttendance);
+  $navAttendance?.classList.toggle("is-active", isAttendance);
+  $navHoliday?.classList.toggle("is-active", !isAttendance);
 
-  $pageTitle.textContent = isAttendance ? "Attendance" : "Holiday";
+  if ($pageTitle) $pageTitle.textContent = isAttendance ? "Attendance" : "Holiday";
   localStorage.setItem(STORAGE_VIEW_KEY, view);
 
   if (!isAttendance) holidayRenderAll();
@@ -88,6 +92,7 @@ function setActiveView(view) {
 
 $navAttendance?.addEventListener("click", () => setActiveView("attendance"));
 $navHoliday?.addEventListener("click", () => setActiveView("holiday"));
+
 setActiveView(localStorage.getItem(STORAGE_VIEW_KEY) || "attendance");
 
 /* ==============================
@@ -97,67 +102,74 @@ const select = document.getElementById("employeeSelect");
 const attendBtn = document.getElementById("attendBtn");
 const leaveBtn = document.getElementById("leaveBtn");
 
-employees.forEach((name) => {
-  const opt = document.createElement("option");
-  opt.value = name;
-  opt.textContent = name;
-  select.appendChild(opt);
-});
+if (select) {
+  employees.forEach((name) => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  });
+}
 
 /* Attend */
-attendBtn.onclick = async () => {
-  const name = select.value;
-  if (!name) return alert("Select your name");
-  if (!confirmSelectedName("Attend", name)) return;
+if (attendBtn) {
+  attendBtn.onclick = async () => {
+    const name = select?.value;
+    if (!name) return alert("Select your name");
 
-  const todayKey = getTodayKeyIST();
-  await ensureDayDocExists(todayKey);
+    if (!confirmSelectedName("Attend", name)) return;
 
-  const ref = doc(db, "attendance", todayKey, "records", name);
-  const snap = await getDoc(ref);
+    const todayKey = getTodayKeyIST();
+    await ensureDayDocExists(todayKey);
 
-  if (snap.exists() && snap.data().attendAt) {
-    alert("Already attended today");
-    return;
-  }
+    const ref = doc(db, "attendance", todayKey, "records", name);
+    const snap = await getDoc(ref);
 
-  await setDoc(ref, { attendAt: serverTimestamp(), leaveAt: null }, { merge: true });
-  await ensureDayDocExists(todayKey);
-  alert("Attendance recorded");
-};
+    if (snap.exists() && snap.data().attendAt) {
+      alert("Already attended today");
+      return;
+    }
+
+    await setDoc(ref, { attendAt: serverTimestamp(), leaveAt: null }, { merge: true });
+    await ensureDayDocExists(todayKey);
+
+    alert("Attendance recorded");
+  };
+}
 
 /* Leave */
-leaveBtn.onclick = async () => {
-  const name = select.value;
-  if (!name) return alert("Select your name");
-  if (!confirmSelectedName("Leave", name)) return;
+if (leaveBtn) {
+  leaveBtn.onclick = async () => {
+    const name = select?.value;
+    if (!name) return alert("Select your name");
 
-  const todayKey = getTodayKeyIST();
-  await ensureDayDocExists(todayKey);
+    if (!confirmSelectedName("Leave", name)) return;
 
-  const ref = doc(db, "attendance", todayKey, "records", name);
-  const snap = await getDoc(ref);
+    const todayKey = getTodayKeyIST();
+    await ensureDayDocExists(todayKey);
 
-  if (!snap.exists() || !snap.data().attendAt) {
-    alert("Attend first");
-    return;
-  }
+    const ref = doc(db, "attendance", todayKey, "records", name);
+    const snap = await getDoc(ref);
 
-  if (snap.data().leaveAt) {
-    alert("Already left");
-    return;
-  }
+    if (!snap.exists() || !snap.data().attendAt) {
+      alert("Attend first");
+      return;
+    }
 
-  await updateDoc(ref, { leaveAt: serverTimestamp() });
-  await ensureDayDocExists(todayKey);
-  alert("Leave recorded");
-};
+    if (snap.data().leaveAt) {
+      alert("Already left");
+      return;
+    }
+
+    await updateDoc(ref, { leaveAt: serverTimestamp() });
+    await ensureDayDocExists(todayKey);
+
+    alert("Leave recorded");
+  };
+}
 
 /* ==============================
    Holiday (List + Month Calendar)
-   HTML IDs match your index.html exactly:
-   hyYear, hyMonth, hyPrevYear, hyNextYear, hyThisYear,
-   holidayTitle, holidayListTitle, holidayList, monthCalendar
 ================================ */
 const $holidayTitle = document.getElementById("holidayTitle");
 const $holidayListTitle = document.getElementById("holidayListTitle");
@@ -166,8 +178,8 @@ const $monthCalendar = document.getElementById("monthCalendar");
 
 const $hyYear = document.getElementById("hyYear");
 const $hyMonth = document.getElementById("hyMonth");
-const $hyPrevYear = document.getElementById("hyPrevYear");
-const $hyNextYear = document.getElementById("hyNextYear");
+const $hyPrevYear = document.getElementById("hyPrevYear"); // ◀ (이전 달)
+const $hyNextYear = document.getElementById("hyNextYear"); // ▶ (다음 달)
 const $hyThisYear = document.getElementById("hyThisYear");
 
 const monthNames = [
@@ -186,27 +198,56 @@ function initHolidayDefaults() {
 }
 initHolidayDefaults();
 
-/* controls */
-$hyYear?.addEventListener("change", () => holidayRenderAll());
-$hyMonth?.addEventListener("change", () => {
-  renderMonthCalendar(Number($hyYear.value), Number($hyMonth.value));
-});
-
+/* ✅ month navigation */
 $hyPrevYear?.addEventListener("click", () => {
-  $hyYear.value = String(Number($hyYear.value) - 1);
-  holidayRenderAll();
-});
-$hyNextYear?.addEventListener("click", () => {
-  $hyYear.value = String(Number($hyYear.value) + 1);
-  holidayRenderAll();
-});
-$hyThisYear?.addEventListener("click", () => {
-  $hyYear.value = String(new Date().getFullYear());
+  if (!$hyYear || !$hyMonth) return;
+
+  let year = Number($hyYear.value);
+  let month = Number($hyMonth.value);
+
+  month -= 1;
+  if (month < 1) {
+    month = 12;
+    year -= 1;
+  }
+
+  $hyYear.value = String(year);
+  $hyMonth.value = String(month);
+
   holidayRenderAll();
 });
 
-/* data */
+$hyNextYear?.addEventListener("click", () => {
+  if (!$hyYear || !$hyMonth) return;
+
+  let year = Number($hyYear.value);
+  let month = Number($hyMonth.value);
+
+  month += 1;
+  if (month > 12) {
+    month = 1;
+    year += 1;
+  }
+
+  $hyYear.value = String(year);
+  $hyMonth.value = String(month);
+
+  holidayRenderAll();
+});
+
+$hyThisYear?.addEventListener("click", () => {
+  if (!$hyYear || !$hyMonth) return;
+  const now = new Date();
+  $hyYear.value = String(now.getFullYear());
+  $hyMonth.value = String(now.getMonth() + 1);
+  holidayRenderAll();
+});
+
+$hyYear?.addEventListener("change", holidayRenderAll);
+$hyMonth?.addEventListener("change", holidayRenderAll);
+
 async function loadHolidaysForYear(yearNum) {
+  // 관리자 저장: holidays 컬렉션, { name, date:"YYYY-MM-DD", year:Number }
   const qy = query(
     collection(db, "holidays"),
     where("year", "==", Number(yearNum)),
@@ -245,11 +286,11 @@ async function holidayRenderAll() {
     holidayByDate = new Map();
   }
 
-  renderHolidayList(yearNum);
+  renderHolidayList();
   renderMonthCalendar(yearNum, monthNum);
 }
 
-function renderHolidayList(yearNum) {
+function renderHolidayList() {
   if (!$holidayList) return;
 
   const items = [];
@@ -285,7 +326,6 @@ function renderMonthCalendar(year, monthNumber) {
 
   const monthPrefix = `${year}-${String(monthNumber).padStart(2, "0")}-`;
 
-  // 이번 달 공휴일만 set
   const holidayDatesInMonth = new Set();
   for (const d of holidayByDate.keys()) {
     if (d.startsWith(monthPrefix)) holidayDatesInMonth.add(d);
@@ -293,16 +333,15 @@ function renderMonthCalendar(year, monthNumber) {
 
   $monthCalendar.innerHTML = `
     <div class="month-head">
-      <h4>${monthNames[mIndex]} ${year}</h4>
+      <h4>${escapeHtml(monthNames[mIndex])} ${escapeHtml(String(year))}</h4>
       <div class="sub">${holidayDatesInMonth.size} holiday date(s)</div>
     </div>
-    <div class="weekdays">${weekday.map(d => `<div>${d}</div>`).join("")}</div>
+    <div class="weekdays">${weekday.map(d => `<div>${escapeHtml(d)}</div>`).join("")}</div>
     <div class="days" id="daysGrid"></div>
   `;
 
   const daysWrap = $monthCalendar.querySelector("#daysGrid");
 
-  // 6 weeks fixed
   for (let cell = 0; cell < 42; cell++) {
     const dayNum = cell - startDow + 1;
     const dayEl = document.createElement("div");
@@ -329,7 +368,7 @@ function renderMonthCalendar(year, monthNumber) {
 
     const iso = toISO(dateObj);
 
-    // ✅ 공휴일 하이라이트(폰트 빨강은 style.css의 .day.holiday에서 처리)
+    // ✅ 공휴일 표시 (폰트 빨강은 CSS의 .day.holiday)
     if (!muted && holidayDatesInMonth.has(iso)) {
       dayEl.classList.add("holiday");
       const names = (holidayByDate.get(iso) || []).map(x => x.name).filter(Boolean);
@@ -341,7 +380,6 @@ function renderMonthCalendar(year, monthNumber) {
   }
 }
 
-/* helpers */
 function toISO(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -349,6 +387,7 @@ function toISO(d) {
   return `${y}-${m}-${day}`;
 }
 
+/* ✅ 이 함수는 반드시 유지 */
 function escapeHtml(str) {
   return String(str)
     .replaceAll("&", "&amp;")
