@@ -206,12 +206,14 @@ body{
   font-size:12px;
   border:1px solid transparent;
   user-select:none;
+  color: var(--text);
 }
 .day.muted{ opacity:.35; }
 .day.weekend{ opacity:.9; }
 
-/* ✅ Holiday highlight */
+/* ✅ Holiday highlight + RED font */
 .day.holiday{
+  color: #ff4d4f;              /* ← 공휴일 폰트 빨간색 */
   font-weight:900;
   border-color:rgba(255,255,255,0.22);
   background:rgba(255,255,255,0.14);
@@ -223,20 +225,18 @@ body{
   width:6px;height:6px;
   border-radius:999px;
   margin:6px auto 0;
-  background: currentColor;
+  background: currentColor;     /* ← 빨간색 점도 같이 */
   opacity:.9;
 }
 
 /* number input spinner 제거 (Chrome, Edge, Safari) */
 input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
+input[type="number"]::-webkit-inner-spin-button{
   -webkit-appearance: none;
   margin: 0;
 }
-
 /* Firefox */
-input[type="number"] {
+input[type="number"]{
   -moz-appearance: textfield;
   appearance: textfield;
 }
-
