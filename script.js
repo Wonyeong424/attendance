@@ -5,6 +5,7 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
+
   collection,
   query,
   where,
@@ -13,7 +14,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* ==============================
-   Employees (existing)
+   Employees
 ================================ */
 const employees = [
   "Kiran Barthwal",
@@ -47,11 +48,7 @@ function confirmSelectedName(action, name) {
 
 async function ensureDayDocExists(dateKey) {
   const dayRef = doc(db, "attendance", dateKey);
-  await setDoc(
-    dayRef,
-    { date: dateKey, updatedAt: serverTimestamp() },
-    { merge: true }
-  );
+  await setDoc(dayRef, { date: dateKey, updatedAt: serverTimestamp() }, { merge: true });
 }
 
 /* ==============================
@@ -71,9 +68,7 @@ const $pageTitle = document.getElementById("pageTitle");
 const $todayKeyBadge = document.getElementById("todayKeyBadge");
 if ($todayKeyBadge) $todayKeyBadge.textContent = `Today (IST): ${getTodayKeyIST()}`;
 
-$sidebarToggle?.addEventListener("click", () => {
-  $sidebar.classList.toggle("is-collapsed");
-});
+$sidebarToggle?.addEventListener("click", () => $sidebar.classList.toggle("is-collapsed"));
 
 function setActiveView(view) {
   const isAttendance = view === "attendance";
@@ -86,12 +81,11 @@ function setActiveView(view) {
   $pageTitle.textContent = isAttendance ? "Attendance" : "Holiday";
   localStorage.setItem(STORAGE_VIEW_KEY, view);
 
-  if (!isAttendance) holidayRenderAll(); // Holiday 화면 들어갈 때 최신 반영
+  if (!isAttendance) holidayRenderAll(); // Holiday 들어갈 때 최신 반영
 }
 
 $navAttendance?.addEventListener("click", () => setActiveView("attendance"));
 $navHoliday?.addEventListener("click", () => setActiveView("holiday"));
-
 setActiveView(localStorage.getItem(STORAGE_VIEW_KEY) || "attendance");
 
 /* ==============================
@@ -101,7 +95,6 @@ const select = document.getElementById("employeeSelect");
 const attendBtn = document.getElementById("attendBtn");
 const leaveBtn = document.getElementById("leaveBtn");
 
-// 드롭다운 채우기
 employees.forEach((name) => {
   const opt = document.createElement("option");
   opt.value = name;
@@ -109,10 +102,9 @@ employees.forEach((name) => {
   select.appendChild(opt);
 });
 
-/* Attend */
 attendBtn.onclick = async () => {
   const name = select.value;
-  if (!name) return alert("Select your name");
+  if (!name) return;
   if (!confirmSelectedName("Attend", name)) return;
 
   const todayKey = getTodayKeyIST();
@@ -121,20 +113,15 @@ attendBtn.onclick = async () => {
   const ref = doc(db, "attendance", todayKey, "records", name);
   const snap = await getDoc(ref);
 
-  if (snap.exists() && snap.data().attendAt) {
-    alert("Already attended today");
-    return;
-  }
+  if (snap.exists() && snap.data().attendAt) return;
 
   await setDoc(ref, { attendAt: serverTimestamp(), leaveAt: null }, { merge: true });
   await ensureDayDocExists(todayKey);
-  alert("Attendance recorded");
 };
 
-/* Leave */
 leaveBtn.onclick = async () => {
   const name = select.value;
-  if (!name) return alert("Select your name");
+  if (!name) return;
   if (!confirmSelectedName("Leave", name)) return;
 
   const todayKey = getTodayKeyIST();
@@ -143,60 +130,56 @@ leaveBtn.onclick = async () => {
   const ref = doc(db, "attendance", todayKey, "records", name);
   const snap = await getDoc(ref);
 
-  if (!snap.exists() || !snap.data().attendAt) {
-    alert("Attend first");
-    return;
-  }
-  if (snap.data().leaveAt) {
-    alert("Already left");
-    return;
-  }
+  if (!snap.exists() || !snap.data().attendAt) return;
+  if (snap.data().leaveAt) return;
 
   await updateDoc(ref, { leaveAt: serverTimestamp() });
   await ensureDayDocExists(todayKey);
-  alert("Leave recorded");
 };
 
 /* ==============================
-   Holiday Calendar (Admin-added only)
-   Firestore: collection "holidays"
-   doc fields: { name, date:"YYYY-MM-DD", year:Number }
+   Holiday (List + Month calendar)
 ================================ */
-const $hybYear = document.getElementById("hybYear");
-const $hybPrev = document.getElementById("hybPrev");
-const $hybNext = document.getElementById("hybNext");
-const $hybThisYear = document.getElementById("hybThisYear");
-
+const $holidayTitle = document.getElementById("holidayTitle");
+const $holidayListTitle = document.getElementById("holidayListTitle");
 const $holidayList = document.getElementById("holidayList");
-const $hybYearGrid = document.getElementById("hybYearGrid");
+const $monthCalendar = document.getElementById("monthCalendar");
 
-const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const $hyYear = document.getElementById("hyYear");
+const $hyMonth = document.getElementById("hyMonth");
+const $hyPrevYear = document.getElementById("hyPrevYear");
+const $hyNextYear = document.getElementById("hyNextYear");
+const $hyThisYear = document.getElementById("hyThisYear");
+
+const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const weekday = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-let holidayByDate = new Map(); // date -> [{name,date,year},...]
+let holidayByDate = new Map(); // date -> [{name,date,year}]
 
-function holidayInit() {
-  if (!$hybYear) return;
-  $hybYear.value = String(new Date().getFullYear());
+function initHolidayDefaults() {
+  const now = new Date();
+  $hyYear.value = String(now.getFullYear());
+  $hyMonth.value = String(now.getMonth() + 1);
 }
-holidayInit();
+initHolidayDefaults();
 
-$hybYear?.addEventListener("change", holidayRenderAll);
-$hybPrev?.addEventListener("click", () => {
-  $hybYear.value = String(Number($hybYear.value) - 1);
+$hyYear.addEventListener("change", holidayRenderAll);
+$hyMonth.addEventListener("change", () => renderMonthCalendar(Number($hyYear.value), Number($hyMonth.value)));
+
+$hyPrevYear.addEventListener("click", () => {
+  $hyYear.value = String(Number($hyYear.value) - 1);
   holidayRenderAll();
 });
-$hybNext?.addEventListener("click", () => {
-  $hybYear.value = String(Number($hybYear.value) + 1);
+$hyNextYear.addEventListener("click", () => {
+  $hyYear.value = String(Number($hyYear.value) + 1);
   holidayRenderAll();
 });
-$hybThisYear?.addEventListener("click", () => {
-  $hybYear.value = String(new Date().getFullYear());
+$hyThisYear.addEventListener("click", () => {
+  $hyYear.value = String(new Date().getFullYear());
   holidayRenderAll();
 });
 
 async function loadHolidaysForYear(yearNum) {
-  // year 필드가 있는 구조를 전제로 함 (admin이 저장할 때 year도 넣어야 함)
   const q = query(
     collection(db, "holidays"),
     where("year", "==", Number(yearNum)),
@@ -209,6 +192,7 @@ async function loadHolidaysForYear(yearNum) {
   snap.forEach((d) => {
     const data = d.data();
     if (!data?.date) return;
+
     const arr = map.get(data.date) || [];
     arr.push({ name: data.name || "Holiday", date: data.date, year: data.year });
     map.set(data.date, arr);
@@ -218,25 +202,22 @@ async function loadHolidaysForYear(yearNum) {
 }
 
 async function holidayRenderAll() {
-  if (!$hybYear || !$hybYearGrid || !$holidayList) return;
+  const yearNum = Number($hyYear.value);
+  if (!Number.isFinite(yearNum)) return;
 
-  const yearNum = Number($hybYear.value);
+  // 제목 업데이트
+  if ($holidayTitle) $holidayTitle.textContent = `Holidays`;
+  if ($holidayListTitle) $holidayListTitle.textContent = `Holidays for ${yearNum}`;
 
-  // 1) Firestore에서 관리자 추가 공휴일 불러오기
   try {
-    $holidayList.innerHTML = `<div class="muted">Loading...</div>`;
     holidayByDate = await loadHolidaysForYear(yearNum);
   } catch (e) {
     console.error(e);
-    $holidayList.innerHTML = `<div class="muted" style="color:#ffb4b4;">Failed to load holidays</div>`;
     holidayByDate = new Map();
   }
 
-  // 2) 오른쪽 리스트 렌더
   renderHolidayList(yearNum);
-
-  // 3) 연간 캘린더 렌더 (1~12월 한 페이지)
-  renderYearCalendar(yearNum);
+  renderMonthCalendar(yearNum, Number($hyMonth.value));
 }
 
 function renderHolidayList(yearNum) {
@@ -246,12 +227,10 @@ function renderHolidayList(yearNum) {
   }
   items.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
-  if (!items.length) {
-    $holidayList.innerHTML = `<div class="muted">No holidays for ${yearNum}</div>`;
-    return;
-  }
-
   $holidayList.innerHTML = "";
+
+  if (!items.length) return;
+
   for (const h of items) {
     const el = document.createElement("div");
     el.className = "holiday-item";
@@ -263,33 +242,35 @@ function renderHolidayList(yearNum) {
   }
 }
 
-function renderYearCalendar(yearNum) {
-  $hybYearGrid.innerHTML = "";
+function renderMonthCalendar(year, monthNumber) {
+  const mIndex = monthNumber - 1;
+  if (!Number.isFinite(year) || !Number.isFinite(mIndex)) return;
 
-  const holidayDates = new Set(holidayByDate.keys()); // "YYYY-MM-DD"
-
-  for (let m = 0; m < 12; m++) {
-    $hybYearGrid.appendChild(buildMonth(yearNum, m, holidayDates));
-  }
-}
-
-function buildMonth(year, monthIndex, holidayDates) {
-  const first = new Date(year, monthIndex, 1);
-  const last = new Date(year, monthIndex + 1, 0);
+  const first = new Date(year, mIndex, 1);
+  const last = new Date(year, mIndex + 1, 0);
   const daysInMonth = last.getDate();
   const startDow = first.getDay();
-  const prevLastDate = new Date(year, monthIndex, 0).getDate();
+  const prevLastDate = new Date(year, mIndex, 0).getDate();
 
-  const card = document.createElement("div");
-  card.className = "month";
-  card.innerHTML = `
-    <h4>${monthNames[monthIndex]} <span>${year}</span></h4>
+  const monthKeyPrefix = `${year}-${String(monthNumber).padStart(2, "0")}-`;
+
+  const holidayDatesInMonth = new Set();
+  for (const d of holidayByDate.keys()) {
+    if (d.startsWith(monthKeyPrefix)) holidayDatesInMonth.add(d);
+  }
+
+  $monthCalendar.innerHTML = `
+    <div class="month-head">
+      <h4>${monthNames[mIndex]} ${year}</h4>
+      <div class="sub">${holidayDatesInMonth.size} holiday date(s)</div>
+    </div>
     <div class="weekdays">${weekday.map(d => `<div>${d}</div>`).join("")}</div>
-    <div class="days"></div>
+    <div class="days" id="daysGrid"></div>
   `;
 
-  const daysWrap = card.querySelector(".days");
+  const daysWrap = $monthCalendar.querySelector("#daysGrid");
 
+  // 6 weeks fixed (42 cells)
   for (let cell = 0; cell < 42; cell++) {
     const dayNum = cell - startDow + 1;
     const dayEl = document.createElement("div");
@@ -299,15 +280,15 @@ function buildMonth(year, monthIndex, holidayDates) {
 
     if (dayNum <= 0) {
       displayNum = prevLastDate + dayNum;
-      dateObj = new Date(year, monthIndex - 1, displayNum);
+      dateObj = new Date(year, mIndex - 1, displayNum);
       muted = true;
     } else if (dayNum > daysInMonth) {
       displayNum = dayNum - daysInMonth;
-      dateObj = new Date(year, monthIndex + 1, displayNum);
+      dateObj = new Date(year, mIndex + 1, displayNum);
       muted = true;
     } else {
       displayNum = dayNum;
-      dateObj = new Date(year, monthIndex, displayNum);
+      dateObj = new Date(year, mIndex, displayNum);
     }
 
     const dow = dateObj.getDay();
@@ -316,11 +297,9 @@ function buildMonth(year, monthIndex, holidayDates) {
 
     const iso = toISO(dateObj);
 
-    // ✅ 관리자 추가 공휴일만 하이라이트 (현재 달 셀만)
-    if (!muted && holidayDates.has(iso)) {
+    // ✅ 이번 달의 공휴일만 강조
+    if (!muted && holidayDatesInMonth.has(iso)) {
       dayEl.classList.add("holiday");
-
-      // tooltip(title)에 공휴일 이름 표시
       const names = (holidayByDate.get(iso) || []).map(x => x.name).filter(Boolean);
       if (names.length) dayEl.title = names.join(" / ");
     }
@@ -328,10 +307,9 @@ function buildMonth(year, monthIndex, holidayDates) {
     dayEl.textContent = String(displayNum);
     daysWrap.appendChild(dayEl);
   }
-
-  return card;
 }
 
+/* helpers */
 function toISO(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");

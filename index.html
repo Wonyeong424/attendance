@@ -61,29 +61,49 @@
       <!-- Holiday View -->
       <section id="viewHoliday" class="view">
         <div class="card">
-          <h2 class="card-title">Holiday Calendar</h2>
+          <div class="holiday-top">
+            <h2 class="card-title" id="holidayTitle">Holidays</h2>
 
-          <div class="holiday-controls">
-            <label class="label">
-              Year
-              <input id="hybYear" class="input" type="number" min="1900" max="2100" />
-            </label>
+            <div class="holiday-controls">
+              <label class="label">
+                Year
+                <input id="hyYear" class="input" type="number" min="1900" max="2100" />
+              </label>
 
-            <div class="ctrl-btns">
-              <button id="hybPrev" class="btn ghost" type="button">◀</button>
-              <button id="hybNext" class="btn ghost" type="button">▶</button>
-              <button id="hybThisYear" class="btn primary" type="button">This Year</button>
+              <label class="label">
+                Month
+                <select id="hyMonth" class="select">
+                  <option value="1">January</option>
+                  <option value="2">February</option>
+                  <option value="3">March</option>
+                  <option value="4">April</option>
+                  <option value="5">May</option>
+                  <option value="6">June</option>
+                  <option value="7">July</option>
+                  <option value="8">August</option>
+                  <option value="9">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </label>
+
+              <div class="ctrl-btns">
+                <button id="hyPrevYear" class="btn ghost" type="button">◀ Year</button>
+                <button id="hyNextYear" class="btn ghost" type="button">Year ▶</button>
+                <button id="hyThisYear" class="btn primary" type="button">This Year</button>
+              </div>
             </div>
           </div>
 
           <div class="holiday-layout">
             <aside class="holiday-list-panel">
-              <h3 class="h3">Holidays</h3>
+              <h3 class="h3" id="holidayListTitle">Holidays</h3>
               <div id="holidayList" class="holiday-list"></div>
             </aside>
 
             <div class="holiday-calendar">
-              <div id="hybYearGrid" class="year-grid"></div>
+              <div id="monthCalendar" class="month-card"></div>
             </div>
           </div>
         </div>
