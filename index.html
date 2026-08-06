@@ -2,79 +2,94 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Attendance at WiBo Corp</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css" />
 
 <script type="module" src="firebase.js"></script>
 <script type="module" src="script.js"></script>
-
-<style>
-body {
-  font-family: system-ui, -apple-system;
-  background: #f4f6f9;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.card {
-  background: white;
-  width: 360px;
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(0,0,0,.1);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-h2 { text-align:center; margin:0; }
-
-select {
-  padding: 14px;
-  font-size: 16px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-}
-
-.buttons {
-  display:flex;
-  gap:12px;
-}
-
-button {
-  flex:1;
-  padding:14px;
-  border:none;
-  border-radius:10px;
-  font-size:16px;
-  font-weight:600;
-  cursor:pointer;
-  color:white;
-}
-
-.attend { background:#4f46e5; }
-.leave  { background:#10b981; }
-
-.attend:hover { background:#4338ca; }
-.leave:hover  { background:#059669; }
-</style>
 </head>
 
 <body>
-<div class="card">
-  <h2>Attendance at WiBo Corp</h2>
+  <div class="scene">
+    <div class="glow glow-a" aria-hidden="true"></div>
+    <div class="glow glow-b" aria-hidden="true"></div>
+    <div class="grid-overlay" aria-hidden="true"></div>
 
-  <select id="employeeSelect">
-    <option value="">Select your name</option>
-  </select>
+    <main class="card">
+      <div class="card-top">
+        <div class="brand">
+          <span class="brand-mark">W</span>
+          <div class="brand-text">
+            <span class="brand-name">WiBo Corp</span>
+            <span class="brand-sub">Attendance Terminal</span>
+          </div>
+        </div>
 
-  <div class="buttons">
-    <button class="attend" id="attendBtn">Attend</button>
-    <button class="leave" id="leaveBtn">Leave</button>
+        <div class="clock" aria-live="off">
+          <span class="clock-dot"></span>
+          <span class="clock-time" id="clockTime">--:--:--</span>
+          <span class="clock-date" id="clockDate">--- -- ---</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label class="field-label" for="employeeSelect">Employee</label>
+        <div class="select-wrap">
+          <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M5 19.2c1.2-3.4 4-5.2 7-5.2s5.8 1.8 7 5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <select id="employeeSelect">
+            <option value="">Select your name</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="attend" id="attendBtn">
+          <span class="btn-icon">↗</span>
+          <span>Attend</span>
+          <span class="btn-shine"></span>
+        </button>
+        <button class="leave" id="leaveBtn">
+          <span class="btn-icon">↙</span>
+          <span>Leave</span>
+          <span class="btn-shine"></span>
+        </button>
+      </div>
+
+      <p class="helper">Select your name, then confirm. Times are recorded in IST.</p>
+    </main>
+
+    <footer class="scene-footer">Internal use only &middot; WiBo Corp HR Systems</footer>
   </div>
-</div>
+
+  <script type="module">
+    const timeEl = document.getElementById('clockTime');
+    const dateEl = document.getElementById('clockDate');
+    const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+    function tick() {
+      const now = new Date();
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const ist = new Date(utc + 5.5 * 60 * 60 * 1000);
+      const hh = String(ist.getHours()).padStart(2, '0');
+      const mm = String(ist.getMinutes()).padStart(2, '0');
+      const ss = String(ist.getSeconds()).padStart(2, '0');
+      timeEl.textContent = `${hh}:${mm}:${ss}`;
+      dateEl.textContent = `${days[ist.getDay()]} ${ist.getDate()} ${months[ist.getMonth()]} · IST`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  </script>
 </body>
 </html>
-
-
