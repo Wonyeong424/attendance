@@ -165,81 +165,133 @@ toggleBtn.addEventListener("click", async () => {
 });
 
 /* ==============================
-   📜 History (Promise.all 병렬 로딩)
+   📜 History (월별 탭 + Promise.all 병렬/지연 로딩)
    ✅ IST "오늘"도 History에 포함 (필터 없음)
 ================================ */
 
-// 다운로드/삭제에서 재사용할 수 있도록 저장
-// [{ date, isToday, records: [{ name, attend, leave }] }]
-let historyData = [];
+// monthKey(YYYY-MM) -> 날짜 배열(내림차순)
+let monthDatesMap = {};
+// 최신순 정렬된 monthKey 목록
+let monthKeys = [];
+// monthKey -> [{ date, isToday, records }]  (조회한 달만 캐시됨 = 지연 로딩)
+let monthCache = {};
+// 현재 선택된 달
+let selectedMonth = null;
 
+function monthLabel(monthKey) {
+  const [y, m] = monthKey.split("-");
+  return `${y}년 ${parseInt(m, 10)}월`;
+}
+
+// attendance 컬렉션의 날짜 문서 ID 전체를 가져와 월별로 묶기 (가벼운 조회)
 async function loadHistory() {
-  const todayKey = getTodayKeyIST();
   const container = document.getElementById("historyContainer");
+  const tabsEl = document.getElementById("monthTabs");
   container.innerHTML = "Loading...";
+  tabsEl.innerHTML = "";
 
   try {
     const snap = await getDocs(collection(db, "attendance"));
-
-    // ✅ 날짜 문서 ID만 추출 (YYYY-MM-DD), 최근 30일
-    const dates = snap.docs
+    const allDates = snap.docs
       .map((d) => d.id)
       .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
-      .sort((a, b) => b.localeCompare(a))
-      .slice(0, 30);
+      .sort((a, b) => b.localeCompare(a));
 
-    if (dates.length === 0) {
-      historyData = [];
+    monthDatesMap = {};
+    for (const date of allDates) {
+      const monthKey = date.slice(0, 7); // "YYYY-MM"
+      if (!monthDatesMap[monthKey]) monthDatesMap[monthKey] = [];
+      monthDatesMap[monthKey].push(date);
+    }
+    monthKeys = Object.keys(monthDatesMap).sort((a, b) => b.localeCompare(a));
+    monthCache = {};
+    selectedMonth = null;
+
+    if (monthKeys.length === 0) {
+      renderMonthTabs();
       container.innerHTML = "<p>No history yet.</p>";
       return;
     }
 
-    // ✅ 날짜 x 직원 전체를 동시에 요청 (예: 30일 x 8명 = 최대 240건을 병렬로)
-    historyData = await Promise.all(
-      dates.map(async (date) => {
-        const records = await Promise.all(
-          EMPLOYEES.map(async (name) => {
-            const ref = doc(db, "attendance", date, "records", name);
-            const s = await getDoc(ref);
-
-            const attend =
-              s.exists() && s.data().attendAt
-                ? formatTimeIST(s.data().attendAt.toDate().toISOString())
-                : "-";
-
-            const leave =
-              s.exists() && s.data().leaveAt
-                ? formatTimeIST(s.data().leaveAt.toDate().toISOString())
-                : "-";
-
-            return { name, attend, leave };
-          })
-        );
-
-        return { date, isToday: date === todayKey, records };
-      })
-    );
-
-    renderHistory();
+    // 가장 최근 달을 기본으로 열기 (해당 달만 실제 데이터 조회 = 지연 로딩)
+    await selectMonth(monthKeys[0]);
   } catch (e) {
     console.error(e);
-    historyData = [];
-    container.innerHTML = `
-      <p style="color:red;">Failed to load history</p>
-    `;
+    container.innerHTML = `<p style="color:red;">Failed to load history</p>`;
   }
 }
 
-// historyData 배열을 화면에 그리기 (삭제 후 재사용)
-function renderHistory() {
+function renderMonthTabs() {
+  const tabsEl = document.getElementById("monthTabs");
+  tabsEl.innerHTML = monthKeys
+    .map(
+      (mk) => `
+      <button class="month-tab-btn${mk === selectedMonth ? " active" : ""}" data-month="${mk}">
+        ${monthLabel(mk)} (${monthDatesMap[mk].length})
+      </button>
+    `
+    )
+    .join("");
+}
+
+// 특정 달의 날짜별 x 직원별 데이터를 병렬로 조회 (캐시에 있으면 재사용)
+async function ensureMonthLoaded(monthKey) {
+  if (monthCache[monthKey]) return monthCache[monthKey];
+
+  const todayKey = getTodayKeyIST();
+  const dates = monthDatesMap[monthKey] || [];
+
+  // ✅ 그 달의 모든 날짜 x 직원 조합을 동시에 요청
+  const days = await Promise.all(
+    dates.map(async (date) => {
+      const records = await Promise.all(
+        EMPLOYEES.map(async (name) => {
+          const ref = doc(db, "attendance", date, "records", name);
+          const s = await getDoc(ref);
+
+          const attend =
+            s.exists() && s.data().attendAt
+              ? formatTimeIST(s.data().attendAt.toDate().toISOString())
+              : "-";
+
+          const leave =
+            s.exists() && s.data().leaveAt
+              ? formatTimeIST(s.data().leaveAt.toDate().toISOString())
+              : "-";
+
+          return { name, attend, leave };
+        })
+      );
+
+      return { date, isToday: date === todayKey, records };
+    })
+  );
+
+  monthCache[monthKey] = days;
+  return days;
+}
+
+async function selectMonth(monthKey) {
+  selectedMonth = monthKey;
+  renderMonthTabs();
+
+  const container = document.getElementById("historyContainer");
+  container.innerHTML = "Loading...";
+
+  const days = await ensureMonthLoaded(monthKey);
+  renderHistoryDays(days);
+}
+
+// 선택된 달의 일자별 테이블을 그리기 (삭제 후 재사용을 위해 함수로 분리)
+function renderHistoryDays(days) {
   const container = document.getElementById("historyContainer");
 
-  if (historyData.length === 0) {
-    container.innerHTML = "<p>No history yet.</p>";
+  if (!days || days.length === 0) {
+    container.innerHTML = "<p>이 달에는 기록이 없습니다.</p>";
     return;
   }
 
-  container.innerHTML = historyData
+  container.innerHTML = days
     .map(({ date, isToday, records }) => {
       const rows = records
         .map(
@@ -276,6 +328,14 @@ function renderHistory() {
     })
     .join("");
 }
+
+// 월 탭 클릭 (이벤트 위임)
+document.getElementById("monthTabs").addEventListener("click", (e) => {
+  const btn = e.target.closest(".month-tab-btn");
+  if (!btn) return;
+  if (btn.dataset.month === selectedMonth) return;
+  selectMonth(btn.dataset.month);
+});
 
 /* ==============================
    ⬇️ CSV 다운로드 (Excel에서 바로 열림)
@@ -319,23 +379,61 @@ document.getElementById("downloadTodayBtn").addEventListener("click", () => {
   downloadCSV(`attendance_${todayKey}.csv`, toCSV(rows));
 });
 
+// 현재 선택된 달만 다운로드
+document.getElementById("downloadMonthBtn").addEventListener("click", async () => {
+  if (!historyLoaded) {
+    await loadHistory();
+    historyLoaded = true;
+  }
+  if (!selectedMonth) {
+    alert("선택된 달이 없습니다.");
+    return;
+  }
+
+  const days = await ensureMonthLoaded(selectedMonth);
+  if (days.length === 0) {
+    alert("다운로드할 데이터가 없습니다.");
+    return;
+  }
+
+  const rows = [["Date", "Name", "Attend", "Leave"]];
+  for (const { date, records } of days) {
+    for (const r of records) rows.push([date, r.name, r.attend, r.leave]);
+  }
+  downloadCSV(`attendance_${selectedMonth}.csv`, toCSV(rows));
+});
+
+// 전체 달을 모두 불러와서 한 번에 다운로드
 document.getElementById("downloadHistoryBtn").addEventListener("click", async () => {
   if (!historyLoaded) {
     await loadHistory();
     historyLoaded = true;
   }
-  if (historyData.length === 0) {
+  if (monthKeys.length === 0) {
     alert("다운로드할 History 데이터가 없습니다.");
     return;
   }
 
-  const rows = [["Date", "Name", "Attend", "Leave"]];
-  for (const { date, records } of historyData) {
-    for (const r of records) {
-      rows.push([date, r.name, r.attend, r.leave]);
+  const btn = document.getElementById("downloadHistoryBtn");
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "불러오는 중...";
+
+  try {
+    // 아직 조회하지 않은 달들도 병렬로 모두 불러오기
+    await Promise.all(monthKeys.map((mk) => ensureMonthLoaded(mk)));
+
+    const rows = [["Date", "Name", "Attend", "Leave"]];
+    for (const mk of monthKeys) {
+      for (const { date, records } of monthCache[mk]) {
+        for (const r of records) rows.push([date, r.name, r.attend, r.leave]);
+      }
     }
+    downloadCSV("attendance_history_all.csv", toCSV(rows));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
-  downloadCSV(`attendance_history.csv`, toCSV(rows));
 });
 
 /* ==============================
@@ -357,9 +455,31 @@ async function deleteDayData(date) {
     );
     await deleteDoc(doc(db, "attendance", date)).catch(() => {});
 
-    // 화면에서도 즉시 제거 (재조회 없이 빠르게 반영)
-    historyData = historyData.filter((d) => d.date !== date);
-    renderHistory();
+    // 화면/캐시에서도 즉시 제거 (재조회 없이 빠르게 반영)
+    const monthKey = date.slice(0, 7);
+
+    if (monthCache[monthKey]) {
+      monthCache[monthKey] = monthCache[monthKey].filter((d) => d.date !== date);
+    }
+    if (monthDatesMap[monthKey]) {
+      monthDatesMap[monthKey] = monthDatesMap[monthKey].filter((d) => d !== date);
+
+      if (monthDatesMap[monthKey].length === 0) {
+        delete monthDatesMap[monthKey];
+        delete monthCache[monthKey];
+        monthKeys = monthKeys.filter((mk) => mk !== monthKey);
+        if (selectedMonth === monthKey) {
+          selectedMonth = monthKeys[0] || null;
+        }
+      }
+    }
+
+    renderMonthTabs();
+    if (selectedMonth) {
+      renderHistoryDays(monthCache[selectedMonth] || []);
+    } else {
+      document.getElementById("historyContainer").innerHTML = "<p>No history yet.</p>";
+    }
 
     alert(`"${date}" 데이터가 삭제되었습니다.`);
   } catch (e) {
@@ -381,7 +501,7 @@ async function deleteAllHistoryExceptToday() {
   deleteAllHistoryBtn.textContent = "삭제 중...";
 
   try {
-    // 화면에 보이는 최근 30일뿐 아니라 실제 컬렉션 전체를 기준으로 삭제 대상 조회
+    // 화면에 보이는 달뿐 아니라 실제 컬렉션 전체를 기준으로 삭제 대상 조회
     const snap = await getDocs(collection(db, "attendance"));
     const dates = snap.docs
       .map((d) => d.id)
