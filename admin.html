@@ -180,6 +180,47 @@
       color: #111827;
     }
 
+    .btn.danger {
+      background: #fff;
+      color: #dc2626;
+      border-color: #fecaca;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .btn.danger:hover {
+      background: #fef2f2;
+    }
+
+    .btn.download {
+      background: #fff;
+      color: #059669;
+      border-color: #a7f3d0;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .btn.download:hover {
+      background: #ecfdf5;
+    }
+
+    .history-day-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .btn-delete-day {
+      border: 1px solid #fecaca;
+      background: #fff;
+      color: #dc2626;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-delete-day:hover { background: #fef2f2; }
+
     .error {
       color: #dc2626;
       margin: 10px 0 0;
@@ -319,11 +360,18 @@
 
           <div class="actions">
             <button class="btn secondary" id="toggleHistory">View more ▼</button>
+            <button class="btn download" id="downloadTodayBtn">⬇️ 오늘 데이터 다운로드 (CSV)</button>
           </div>
         </div>
 
         <div id="historySection" class="card" style="display:none;">
-          <h2 class="section-title">History</h2>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+            <h2 class="section-title" style="margin:0;">History</h2>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn download" id="downloadHistoryBtn">⬇️ 전체 History 다운로드 (CSV)</button>
+              <button class="btn danger" id="deleteAllHistoryBtn">🗑 지난 기록 전체 삭제 (오늘 제외)</button>
+            </div>
+          </div>
           <div id="historyContainer"></div>
         </div>
       </section>
@@ -360,4 +408,3 @@
   </script>
 </body>
 </html>
-
