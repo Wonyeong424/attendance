@@ -1,117 +1,80 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WiBo Corp - Attendance</title>
-  <link rel="stylesheet" href="./style.css" />
+<meta charset="UTF-8" />
+<title>Attendance at WiBo Corp</title>
+
+<script type="module" src="firebase.js"></script>
+<script type="module" src="script.js"></script>
+
+<style>
+body {
+  font-family: system-ui, -apple-system;
+  background: #f4f6f9;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card {
+  background: white;
+  width: 360px;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+h2 { text-align:center; margin:0; }
+
+select {
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+}
+
+.buttons {
+  display:flex;
+  gap:12px;
+}
+
+button {
+  flex:1;
+  padding:14px;
+  border:none;
+  border-radius:10px;
+  font-size:16px;
+  font-weight:600;
+  cursor:pointer;
+  color:white;
+}
+
+.attend { background:#4f46e5; }
+.leave  { background:#10b981; }
+
+.attend:hover { background:#4338ca; }
+.leave:hover  { background:#059669; }
+</style>
 </head>
 
 <body>
-  <div class="app">
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar-top">
-        <button id="sidebarToggle" class="icon-btn" aria-label="Toggle sidebar">☰</button>
-        <div class="brand">
-          <div class="brand-title">WiBo Corp</div>
-          <div class="brand-sub">Attendance Tool</div>
-        </div>
-      </div>
+<div class="card">
+  <h2>Attendance at WiBo Corp</h2>
 
-      <nav class="nav">
-        <button id="navAttendance" class="nav-item is-active" type="button">
-          <span class="dot"></span><span class="nav-text">Attendance</span>
-        </button>
-        <button id="navHoliday" class="nav-item" type="button">
-          <span class="dot"></span><span class="nav-text">Holiday</span>
-        </button>
-      </nav>
+  <select id="employeeSelect">
+    <option value="">Select your name</option>
+  </select>
 
-      <div class="sidebar-foot">
-        <small id="todayKeyBadge"></small>
-      </div>
-    </aside>
-
-    <!-- Main -->
-    <main class="main">
-      <header class="topbar">
-        <h1 id="pageTitle">Attendance</h1>
-      </header>
-
-      <!-- Attendance View -->
-      <section id="viewAttendance" class="view is-active">
-        <div class="card">
-          <h2 class="card-title">Check In / Out</h2>
-
-          <div class="form-row">
-            <label class="label" for="employeeSelect">Employee</label>
-            <select id="employeeSelect" class="select">
-              <option value="">Select your name</option>
-            </select>
-          </div>
-
-          <div class="buttons">
-            <button class="btn attend" id="attendBtn" type="button">Attend</button>
-            <button class="btn leave" id="leaveBtn" type="button">Leave</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Holiday View -->
-      <section id="viewHoliday" class="view">
-        <div class="card">
-          <div class="holiday-top">
-            <h2 class="card-title" id="holidayTitle">Company Holidays</h2>
-
-            <div class="holiday-controls">
-              <label class="label">
-                Year
-                <input id="hyYear" class="input" type="number" min="1900" max="2100" />
-              </label>
-
-              <label class="label">
-                Month
-                <select id="hyMonth" class="select">
-                  <option value="1">January</option>
-                  <option value="2">February</option>
-                  <option value="3">March</option>
-                  <option value="4">April</option>
-                  <option value="5">May</option>
-                  <option value="6">June</option>
-                  <option value="7">July</option>
-                  <option value="8">August</option>
-                  <option value="9">September</option>
-                  <option value="10">October</option>
-                  <option value="11">November</option>
-                  <option value="12">December</option>
-                </select>
-              </label>
-
-              <div class="ctrl-btns">
-                <!-- ✅ 텍스트만 Month로 변경 -->
-                <button id="hyPrevYear" class="btn ghost" type="button">◀ Month</button>
-                <button id="hyNextYear" class="btn ghost" type="button">Month ▶</button>
-                <button id="hyThisYear" class="btn primary" type="button">Now</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="holiday-layout">
-            <aside class="holiday-list-panel">
-              <h3 class="h3" id="holidayListTitle">Holidays</h3>
-              <div id="holidayList" class="holiday-list"></div>
-            </aside>
-
-            <div class="holiday-calendar">
-              <div id="monthCalendar" class="month-card"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
+  <div class="buttons">
+    <button class="attend" id="attendBtn">Attend</button>
+    <button class="leave" id="leaveBtn">Leave</button>
   </div>
-
-  <script type="module" src="./script.js"></script>
+</div>
 </body>
 </html>
+
+

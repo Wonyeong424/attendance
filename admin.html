@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Attendance Admin</title>
 
-  <!-- SheetJS (Excel export) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
   <style>
     :root {
       --bg: #f6f7fb;
@@ -39,6 +36,7 @@
       grid-template-columns: var(--sidebar-w) 1fr;
     }
 
+    /* Sidebar */
     .sidebar {
       background: #0b1220;
       color: #e5e7eb;
@@ -105,6 +103,7 @@
       padding-top: 14px;
     }
 
+    /* Main */
     .main {
       padding: 28px 28px 40px;
     }
@@ -140,6 +139,7 @@
 
     .card + .card { margin-top: 16px; }
 
+    /* PIN card */
     .pin-row {
       display: flex;
       gap: 10px;
@@ -147,21 +147,19 @@
       margin-top: 10px;
     }
 
-    input[type="password"],
-    input[type="month"] {
+    input[type="password"] {
       border: 1px solid var(--line2);
       border-radius: 12px;
       padding: 10px 12px;
       font-size: 14px;
+      min-width: 220px;
       background: #fff;
     }
-    input[type="password"]:focus,
-    input[type="month"]:focus {
+    input[type="password"]:focus {
       outline: none;
       box-shadow: var(--focus);
       border-color: rgba(59,130,246,0.5);
     }
-    input[type="password"] { min-width: 220px; }
 
     .btn {
       border: 1px solid var(--line2);
@@ -182,17 +180,13 @@
       color: #111827;
     }
 
-    .btn.export {
-      background: #16a34a;
-      border-color: #15803d;
-    }
-
     .error {
       color: #dc2626;
       margin: 10px 0 0;
       font-size: 13px;
     }
 
+    /* Table (Excel friendly: keep true <table>) */
     .table-wrap {
       width: 100%;
       overflow: auto;
@@ -202,7 +196,7 @@
     }
 
     table {
-      border-collapse: collapse;
+      border-collapse: collapse; /* Excel copy friendly */
       width: 100%;
       min-width: 520px;
     }
@@ -248,28 +242,7 @@
       color: #111827;
     }
 
-    /* Employee section filters */
-    .emp-filters {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-    }
-
-    .emp-filters select {
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid var(--line2);
-      font-size: 14px;
-      background: #fff;
-      min-width: 180px;
-    }
-    .emp-filters select:focus {
-      outline: none;
-      box-shadow: var(--focus);
-      border-color: rgba(59,130,246,0.5);
-    }
-
+    /* Responsive */
     @media (max-width: 860px) {
       .app { grid-template-columns: 1fr; }
       .sidebar {
@@ -286,6 +259,7 @@
 
 <body>
   <div class="app">
+    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">
         <div class="title">Attendance Admin</div>
@@ -295,16 +269,15 @@
       <div class="nav">
         <button id="navToday">📌 Today</button>
         <button id="navHistory">🗂️ History</button>
-        <button id="navEmployee">👤 Employee Monthly</button>
       </div>
 
       <div class="hint">
         • 테이블은 복사해서 엑셀에 붙여넣기 쉬운 형태로 유지됩니다.<br />
-        • History가 안 보이면 권한/Rules 문제일 수 있어요.<br />
-        • ⬇ Excel 버튼으로 데이터를 직접 다운로드할 수 있어요.
+        • History가 안 보이면 권한/Rules 문제일 수 있어요.
       </div>
     </aside>
 
+    <!-- Main -->
     <main class="main">
       <!-- PIN 입력 -->
       <section id="pinSection" class="card">
@@ -314,6 +287,7 @@
             <div class="meta">관리자 PIN을 입력해 주세요.</div>
           </div>
         </div>
+
         <div class="pin-row">
           <input type="password" id="pinInput" placeholder="Enter PIN" />
           <button class="btn" id="pinBtn">Enter</button>
@@ -323,42 +297,15 @@
 
       <!-- 관리자 화면 -->
       <section id="adminSection" style="display:none;">
-        <!-- Employee Monthly -->
-        <div id="employeeSection" class="card" style="display:none; margin-top:16px;">
-          <h2 class="section-title">👤 Employee Monthly View</h2>
-          <div class="emp-filters">
-            <select id="empSelect">
-              <option value="">Select employee</option>
-            </select>
-            <input type="month" id="monthInput" />
-            <button class="btn" id="loadEmpBtn">Search</button>
-            <button class="btn export" id="exportEmpBtn">⬇ Excel</button>
-          </div>
-          <div class="table-wrap">
-            <table id="empTable">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Attend</th>
-                  <th>Leave</th>
-                </tr>
-              </thead>
-              <tbody id="empTableBody">
-                <tr><td colspan="3" style="color:var(--muted); text-align:center;">직원과 월을 선택 후 Search를 누르세요.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Today -->
         <div class="card">
           <div class="header">
             <div>
               <h1 id="title">Today's Attendance</h1>
             </div>
           </div>
+
           <div class="table-wrap">
-            <table id="todayTable">
+            <table>
               <thead>
                 <tr>
                   <th>Name</th>
@@ -369,57 +316,48 @@
               <tbody id="attendanceTable"></tbody>
             </table>
           </div>
+
           <div class="actions">
             <button class="btn secondary" id="toggleHistory">View more ▼</button>
-            <button class="btn export" id="exportTodayBtn">⬇ Excel (Today)</button>
           </div>
         </div>
 
-        <!-- History -->
-        <div id="historySection" class="card" style="display:none; margin-top:16px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:4px;">
-            <h2 class="section-title" style="margin:0;">History</h2>
-            <button class="btn export" id="exportHistoryBtn">⬇ Excel (History)</button>
-          </div>
+        <div id="historySection" class="card" style="display:none;">
+          <h2 class="section-title">History</h2>
           <div id="historyContainer"></div>
         </div>
-
       </section>
     </main>
   </div>
 
   <script type="module" src="admin.js"></script>
 
+  <!-- Sidebar buttons (admin.js 수정 없이 연결) -->
   <script type="module">
-    const navToday    = document.getElementById("navToday");
-    const navHistory  = document.getElementById("navHistory");
-    const navEmployee = document.getElementById("navEmployee");
-    const adminSection    = document.getElementById("adminSection");
-    const toggleHistory   = document.getElementById("toggleHistory");
-    const historySection  = document.getElementById("historySection");
-    const employeeSection = document.getElementById("employeeSection");
+    const navToday = document.getElementById("navToday");
+    const navHistory = document.getElementById("navHistory");
+    const adminSection = document.getElementById("adminSection");
+    const toggleHistory = document.getElementById("toggleHistory");
+    const historySection = document.getElementById("historySection");
 
     navToday.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
     navHistory.addEventListener("click", () => {
+      // PIN 통과 후에만 동작
       if (adminSection.style.display === "none") return;
-      employeeSection.style.display = "none";
+
+      // history가 닫혀있으면 토글 버튼으로 열기
       const isOpen = historySection.style.display === "block";
       if (!isOpen) toggleHistory.click();
+
+      // 열리고 난 뒤 위치로 스크롤
       setTimeout(() => {
         historySection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
-    });
-
-    navEmployee.addEventListener("click", () => {
-      if (adminSection.style.display === "none") return;
-      employeeSection.style.display = "block";
-      setTimeout(() => {
-        employeeSection.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
     });
   </script>
 </body>
 </html>
+
