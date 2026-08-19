@@ -338,6 +338,7 @@
       <div class="nav">
         <button id="navToday">📌 Today</button>
         <button id="navHistory">🗂️ History</button>
+        <button id="navCalendar">🗓️ Calendar</button>
       </div>
 
       <div class="hint">
@@ -408,6 +409,29 @@
 
           <div id="historyContainer"></div>
         </div>
+
+        <div id="calendarSection" class="card" style="display:none;">
+          <div class="header" style="margin-bottom: 6px;">
+            <div>
+              <h2 class="section-title" style="margin:0;">Calendar</h2>
+              <div class="meta">회사 일정을 추가하고 관리합니다.</div>
+            </div>
+          </div>
+
+          <div class="pin-row" style="margin-top:10px;">
+            <input type="date" id="calendarDateInput" />
+            <input
+              type="text"
+              id="calendarTitleInput"
+              placeholder="이벤트 내용 (예: 팀 회식, 홍길동 휴가)"
+              style="flex:1; min-width:220px; border:1px solid var(--line2); border-radius:12px; padding:10px 12px; font-size:14px;"
+            />
+            <button class="btn" id="calendarAddBtn">추가</button>
+          </div>
+          <p id="calendarError" class="error"></p>
+
+          <div id="calendarListContainer" style="margin-top:16px;"></div>
+        </div>
       </section>
     </main>
   </div>
@@ -418,9 +442,11 @@
   <script type="module">
     const navToday = document.getElementById("navToday");
     const navHistory = document.getElementById("navHistory");
+    const navCalendar = document.getElementById("navCalendar");
     const adminSection = document.getElementById("adminSection");
     const toggleHistory = document.getElementById("toggleHistory");
     const historySection = document.getElementById("historySection");
+    const calendarSection = document.getElementById("calendarSection");
 
     navToday.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -437,6 +463,21 @@
       // 열리고 난 뒤 위치로 스크롤
       setTimeout(() => {
         historySection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    });
+
+    navCalendar.addEventListener("click", () => {
+      // PIN 통과 후에만 동작
+      if (adminSection.style.display === "none") return;
+
+      // calendar 섹션이 닫혀있으면 열기 (admin.js의 window.openCalendarSection 사용)
+      const isOpen = calendarSection.style.display === "block";
+      if (!isOpen && window.openCalendarSection) {
+        window.openCalendarSection();
+      }
+
+      setTimeout(() => {
+        calendarSection.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
     });
   </script>

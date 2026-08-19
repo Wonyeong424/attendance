@@ -5,6 +5,8 @@ import {
   deleteDoc,
   collection,
   getDocs,
+  addDoc,
+  serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 console.log("🔥 admin.js loaded (IST production)");
@@ -543,4 +545,158 @@ document.getElementById("historyContainer").addEventListener("click", (e) => {
 // 전체 과거 기록 삭제 버튼
 document.getElementById("deleteAllHistoryBtn").addEventListener("click", () => {
   deleteAllHistoryExceptToday();
+});
+
+/* ==============================
+   🗓️ Calendar (회사 일정 관리)
+   - Firestore 컬렉션: calendarEvents
+     문서 필드: { date: "YYYY-MM-DD", title: string, createdAt }
+================================ */
+
+const calendarSection = document.getElementById("calendarSection");
+const calendarDateInput = document.getElementById("calendarDateInput");
+const calendarTitleInput = document.getElementById("calendarTitleInput");
+const calendarAddBtn = document.getElementById("calendarAddBtn");
+const calendarError = document.getElementById("calendarError");
+const calendarListContainer = document.getElementById("calendarListContainer");
+
+let calendarLoaded = false;
+let calendarEvents = []; // [{ id, date, title }]
+
+// 사이드바 "Calendar" 클릭 시 섹션을 열고(최초 1회) 데이터를 로드
+window.openCalendarSection = async function () {
+  calendarSection.style.display = "block";
+  if (!calendarLoaded) {
+    await loadCalendarEvents();
+    calendarLoaded = true;
+  }
+};
+
+async function loadCalendarEvents() {
+  calendarListContainer.innerHTML = "Loading...";
+
+  try {
+    const snap = await getDocs(collection(db, "calendarEvents"));
+    calendarEvents = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.date))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    renderCalendarEvents();
+  } catch (e) {
+    console.error(e);
+    calendarListContainer.innerHTML = `<p style="color:red;">Failed to load calendar events</p>`;
+  }
+}
+
+function renderCalendarEvents() {
+  if (calendarEvents.length === 0) {
+    calendarListContainer.innerHTML = "<p>등록된 일정이 없습니다.</p>";
+    return;
+  }
+
+  // 날짜별로 그룹화
+  const grouped = {};
+  for (const ev of calendarEvents) {
+    if (!grouped[ev.date]) grouped[ev.date] = [];
+    grouped[ev.date].push(ev);
+  }
+
+  const todayKey = getTodayKeyIST();
+
+  calendarListContainer.innerHTML = Object.keys(grouped)
+    .sort((a, b) => a.localeCompare(b))
+    .map((date) => {
+      const rows = grouped[date]
+        .map(
+          (ev) => `
+          <tr>
+            <td>${ev.title}</td>
+            <td style="width:1%;">
+              <button class="btn-delete-day" data-id="${ev.id}">🗑 삭제</button>
+            </td>
+          </tr>
+        `
+        )
+        .join("");
+
+      return `
+        <div class="history-day">
+          <div class="history-day-header">
+            <h4 style="margin:0;">${date}${date === todayKey ? " (Today)" : ""}</h4>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+calendarAddBtn.addEventListener("click", async () => {
+  calendarError.textContent = "";
+
+  const date = calendarDateInput.value;
+  const title = calendarTitleInput.value.trim();
+
+  if (!date) {
+    calendarError.textContent = "날짜를 선택해 주세요.";
+    return;
+  }
+  if (!title) {
+    calendarError.textContent = "이벤트 내용을 입력해 주세요.";
+    return;
+  }
+
+  calendarAddBtn.disabled = true;
+  try {
+    const ref = await addDoc(collection(db, "calendarEvents"), {
+      date,
+      title,
+      createdAt: serverTimestamp(),
+    });
+
+    calendarEvents.push({ id: ref.id, date, title });
+    calendarEvents.sort((a, b) => a.date.localeCompare(b.date));
+    renderCalendarEvents();
+
+    calendarTitleInput.value = "";
+  } catch (e) {
+    console.error(e);
+    calendarError.textContent = "일정 추가 중 오류가 발생했습니다.";
+  } finally {
+    calendarAddBtn.disabled = false;
+  }
+});
+
+calendarTitleInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") calendarAddBtn.click();
+});
+
+// 이벤트 삭제 (이벤트 위임)
+calendarListContainer.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".btn-delete-day");
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  const ok = confirm("이 일정을 삭제하시겠습니까?");
+  if (!ok) return;
+
+  try {
+    await deleteDoc(doc(db, "calendarEvents", id));
+    calendarEvents = calendarEvents.filter((ev) => ev.id !== id);
+    renderCalendarEvents();
+  } catch (err) {
+    console.error(err);
+    alert("삭제 중 오류가 발생했습니다.");
+  }
 });
