@@ -41,118 +41,129 @@ function getTodayKeyIST() {
 }
 
 function confirmSelectedName(action, name) {
-  // action: "Attend" | "Leave"
   return window.confirm(
     `Is this you?\nSelected name: "${name}"\n\nPress OK to ${action}, or Cancel to go back.`
   );
 }
 
-// ✅ 날짜(부모) 문서를 "실제로 존재"하게 만들기 (History list가 가능해짐)
 async function ensureDayDocExists(dateKey) {
   const dayRef = doc(db, "attendance", dateKey);
   await setDoc(
     dayRef,
-    {
-      date: dateKey,
-      updatedAt: serverTimestamp(),
-    },
+    { date: dateKey, updatedAt: serverTimestamp() },
     { merge: true }
   );
 }
 
 /* ==============================
-   UI elements
+   Sidebar: collapse + view switch
+================================ */
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
+const navAttendance = document.getElementById("navAttendance");
+const navHoliday = document.getElementById("navHoliday");
+const viewAttendance = document.getElementById("viewAttendance");
+const viewHoliday = document.getElementById("viewHoliday");
+const pageTitle = document.getElementById("pageTitle");
+
+sidebarToggle?.addEventListener("click", () => {
+  sidebar?.classList.toggle("is-collapsed");
+});
+
+function setActiveView(view) {
+  const isAttendance = view === "attendance";
+
+  viewAttendance?.classList.toggle("is-active", isAttendance);
+  viewHoliday?.classList.toggle("is-active", !isAttendance);
+
+  navAttendance?.classList.toggle("is-active", isAttendance);
+  navHoliday?.classList.toggle("is-active", !isAttendance);
+
+  if (pageTitle) pageTitle.textContent = isAttendance ? "Attendance" : "Company Holidays";
+}
+
+navAttendance?.addEventListener("click", () => setActiveView("attendance"));
+navHoliday?.addEventListener("click", () => setActiveView("holiday"));
+
+/* ==============================
+   UI elements: attendance
 ================================ */
 const select = document.getElementById("employeeSelect");
 const attendBtn = document.getElementById("attendBtn");
 const leaveBtn = document.getElementById("leaveBtn");
 
-// 드롭다운 채우기
-employees.forEach((name) => {
-  const opt = document.createElement("option");
-  opt.value = name;
-  opt.textContent = name;
-  select.appendChild(opt);
-});
-
-/* ==============================
-   Attend
-================================ */
-attendBtn.onclick = async () => {
-  const name = select.value;
-  if (!name) return alert("Select your name");
-
-  // ✅ 실수 방지 확인 팝업
-  if (!confirmSelectedName("Attend", name)) return;
-
-  const todayKey = getTodayKeyIST();
-
-  // ✅ 날짜 문서 생성/갱신 (History를 위해 필수)
-  await ensureDayDocExists(todayKey);
-
-  const ref = doc(db, "attendance", todayKey, "records", name);
-  const snap = await getDoc(ref);
-
-  if (snap.exists() && snap.data().attendAt) {
-    alert("Already attended today");
-    return;
-  }
-
-  await setDoc(
-    ref,
-    {
-      attendAt: serverTimestamp(),
-      leaveAt: null,
-    },
-    { merge: true }
-  );
-
-  // ✅ 날짜 문서 갱신(선택이지만 유용)
-  await ensureDayDocExists(todayKey);
-
-  alert("Attendance recorded");
-};
-
-/* ==============================
-   Leave
-================================ */
-leaveBtn.onclick = async () => {
-  const name = select.value;
-  if (!name) return alert("Select your name");
-
-  // ✅ 실수 방지 확인 팝업
-  if (!confirmSelectedName("Leave", name)) return;
-
-  const todayKey = getTodayKeyIST();
-
-  // ✅ 날짜 문서 생성/갱신 (History를 위해 필수)
-  await ensureDayDocExists(todayKey);
-
-  const ref = doc(db, "attendance", todayKey, "records", name);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists() || !snap.data().attendAt) {
-    alert("Attend first");
-    return;
-  }
-
-  if (snap.data().leaveAt) {
-    alert("Already left");
-    return;
-  }
-
-  await updateDoc(ref, {
-    leaveAt: serverTimestamp(),
+if (select) {
+  employees.forEach((name) => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
   });
+}
 
-  // ✅ 날짜 문서 갱신
-  await ensureDayDocExists(todayKey);
+/* Attend */
+if (attendBtn) {
+  attendBtn.onclick = async () => {
+    const name = select?.value;
+    if (!name) return alert("Select your name");
 
-  alert("Leave recorded");
-};
+    if (!confirmSelectedName("Attend", name)) return;
+
+    const todayKey = getTodayKeyIST();
+    await ensureDayDocExists(todayKey);
+
+    const ref = doc(db, "attendance", todayKey, "records", name);
+    const snap = await getDoc(ref);
+
+    if (snap.exists() && snap.data().attendAt) {
+      alert("Already attended today");
+      return;
+    }
+
+    await setDoc(
+      ref,
+      { attendAt: serverTimestamp(), leaveAt: null },
+      { merge: true }
+    );
+    await ensureDayDocExists(todayKey);
+
+    alert("Attendance recorded");
+  };
+}
+
+/* Leave */
+if (leaveBtn) {
+  leaveBtn.onclick = async () => {
+    const name = select?.value;
+    if (!name) return alert("Select your name");
+
+    if (!confirmSelectedName("Leave", name)) return;
+
+    const todayKey = getTodayKeyIST();
+    await ensureDayDocExists(todayKey);
+
+    const ref = doc(db, "attendance", todayKey, "records", name);
+    const snap = await getDoc(ref);
+
+    if (!snap.exists() || !snap.data().attendAt) {
+      alert("Attend first");
+      return;
+    }
+
+    if (snap.data().leaveAt) {
+      alert("Already left");
+      return;
+    }
+
+    await updateDoc(ref, { leaveAt: serverTimestamp() });
+    await ensureDayDocExists(todayKey);
+
+    alert("Leave recorded");
+  };
+}
 
 /* ==============================
-   📅 Company Holidays Calendar
+   📅 Company Holidays — grid calendar
    관리자(admin.html)에서 등록한 "holidays" 컬렉션을
    { name, date:"YYYY-MM-DD", year:Number } 스키마 그대로 읽어와서
    달력 형태로 표시하고, 휴일 날짜 아래에 이름을 보여줍니다.
@@ -169,6 +180,18 @@ const calGridEl = document.getElementById("calGrid");
 const calPrevBtn = document.getElementById("calPrevBtn");
 const calNextBtn = document.getElementById("calNextBtn");
 const calTodayBtn = document.getElementById("calTodayBtn");
+
+// 필수 캘린더 엘리먼트가 하나라도 없으면(마크업 불일치 등) 콘솔에 남기고
+// 나머지 캘린더 로직은 조용히 건너뜁니다. (attend/leave 기능에는 영향 없음)
+const calendarReady =
+  calMonthLabel && calWeekdaysEl && calGridEl && calPrevBtn && calNextBtn && calTodayBtn;
+
+if (!calendarReady) {
+  console.error(
+    "[calendar] Missing one or more calendar elements in the DOM:",
+    { calMonthLabel, calWeekdaysEl, calGridEl, calPrevBtn, calNextBtn, calTodayBtn }
+  );
+}
 
 let calYear, calMonth; // calMonth: 1-12
 let holidayByDate = new Map(); // "YYYY-MM-DD" -> [name, ...]
@@ -272,33 +295,43 @@ function renderCalendarGrid() {
 }
 
 async function refreshCalendar() {
-  holidayByDate = await loadHolidaysForYear(calYear);
-  renderCalendarGrid();
+  try {
+    holidayByDate = await loadHolidaysForYear(calYear);
+    renderCalendarGrid();
+  } catch (e) {
+    console.error("[calendar] refreshCalendar failed", e);
+  }
 }
 
-calPrevBtn.addEventListener("click", () => {
+function goToPrevMonth() {
   calMonth -= 1;
   if (calMonth < 1) {
     calMonth = 12;
     calYear -= 1;
   }
   refreshCalendar();
-});
+}
 
-calNextBtn.addEventListener("click", () => {
+function goToNextMonth() {
   calMonth += 1;
   if (calMonth > 12) {
     calMonth = 1;
     calYear += 1;
   }
   refreshCalendar();
-});
+}
 
-calTodayBtn.addEventListener("click", () => {
+function goToToday() {
   initCalendarDefaults();
   refreshCalendar();
-});
+}
 
-initCalendarDefaults();
-renderWeekdayHeader();
-refreshCalendar();
+if (calendarReady) {
+  calPrevBtn.addEventListener("click", goToPrevMonth);
+  calNextBtn.addEventListener("click", goToNextMonth);
+  calTodayBtn.addEventListener("click", goToToday);
+
+  initCalendarDefaults();
+  renderWeekdayHeader();
+  refreshCalendar();
+}

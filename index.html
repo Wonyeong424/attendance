@@ -16,74 +16,105 @@
 </head>
 
 <body>
-  <div class="scene">
+  <div class="app-shell">
+    <div class="grid-overlay" aria-hidden="true"></div>
     <div class="glow glow-a" aria-hidden="true"></div>
     <div class="glow glow-b" aria-hidden="true"></div>
-    <div class="grid-overlay" aria-hidden="true"></div>
 
-    <main class="card">
-      <div class="card-top">
-        <div class="brand">
-          <span class="brand-mark">W</span>
-          <div class="brand-text">
-            <span class="brand-name">WiBo Corp</span>
-            <span class="brand-sub">Attendance Terminal</span>
+    <div class="app">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-top">
+          <button id="sidebarToggle" class="icon-btn" type="button" aria-label="Toggle sidebar">☰</button>
+          <div class="brand">
+            <span class="brand-mark">W</span>
+            <div class="brand-text">
+              <span class="brand-name">WiBo Corp</span>
+              <span class="brand-sub">Attendance Terminal</span>
+            </div>
           </div>
         </div>
 
-        <div class="clock" aria-live="off">
-          <span class="clock-dot"></span>
-          <span class="clock-time" id="clockTime">--:--:--</span>
-          <span class="clock-date" id="clockDate">--- -- ---</span>
+        <nav class="nav">
+          <button id="navAttendance" class="nav-item is-active" type="button">
+            <span class="nav-icon">🕒</span><span class="nav-text">Attendance</span>
+          </button>
+          <button id="navHoliday" class="nav-item" type="button">
+            <span class="nav-icon">📅</span><span class="nav-text">Holiday</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <small>Internal use only &middot; WiBo Corp HR Systems</small>
         </div>
-      </div>
+      </aside>
 
-      <div class="divider"></div>
-
-      <div class="field">
-        <label class="field-label" for="employeeSelect">Employee</label>
-        <div class="select-wrap">
-          <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M5 19.2c1.2-3.4 4-5.2 7-5.2s5.8 1.8 7 5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          <select id="employeeSelect">
-            <option value="">Select your name</option>
-          </select>
+      <!-- Main -->
+      <main class="main">
+        <div class="topbar">
+          <h1 id="pageTitle">Attendance</h1>
+          <div class="clock" aria-live="off">
+            <span class="clock-dot"></span>
+            <span class="clock-time" id="clockTime">--:--:--</span>
+            <span class="clock-date" id="clockDate">--- -- ---</span>
+          </div>
         </div>
-      </div>
 
-      <div class="buttons">
-        <button class="attend" id="attendBtn">
-          <span class="btn-icon">↗</span>
-          <span>Attend</span>
-          <span class="btn-shine"></span>
-        </button>
-        <button class="leave" id="leaveBtn">
-          <span class="btn-icon">↙</span>
-          <span>Leave</span>
-          <span class="btn-shine"></span>
-        </button>
-      </div>
+        <!-- Attendance View -->
+        <section id="viewAttendance" class="view is-active">
+          <div class="card">
+            <div class="field">
+              <label class="field-label" for="employeeSelect">Employee</label>
+              <div class="select-wrap">
+                <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/>
+                  <path d="M5 19.2c1.2-3.4 4-5.2 7-5.2s5.8 1.8 7 5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                <select id="employeeSelect">
+                  <option value="">Select your name</option>
+                </select>
+              </div>
+            </div>
 
-      <p class="helper">Select your name, then confirm. Times are recorded in IST.</p>
-    </main>
+            <div class="buttons">
+              <button class="attend" id="attendBtn">
+                <span class="btn-icon">↗</span>
+                <span>Attend</span>
+                <span class="btn-shine"></span>
+              </button>
+              <button class="leave" id="leaveBtn">
+                <span class="btn-icon">↙</span>
+                <span>Leave</span>
+                <span class="btn-shine"></span>
+              </button>
+            </div>
 
-    <!-- Company Holidays Calendar (관리자가 등록한 휴일을 그대로 표시) -->
-    <section class="calendar-card" aria-label="Company Holidays">
-      <div class="cal-head">
-        <button class="cal-nav" id="calPrevBtn" type="button" aria-label="Previous month">‹</button>
-        <div class="cal-title">
-          <span id="calMonthLabel">-- ----</span>
-          <button class="cal-today-btn" id="calTodayBtn" type="button">Today</button>
-        </div>
-        <button class="cal-nav" id="calNextBtn" type="button" aria-label="Next month">›</button>
-      </div>
-      <div class="cal-weekdays" id="calWeekdays"></div>
-      <div class="cal-grid" id="calGrid"></div>
-    </section>
+            <p class="helper">Select your name, then confirm. Times are recorded in IST.</p>
+          </div>
+        </section>
 
-    <footer class="scene-footer">Internal use only &middot; WiBo Corp HR Systems</footer>
+        <!-- Holiday View -->
+        <section id="viewHoliday" class="view">
+          <div class="calendar-card">
+            <div class="cal-head">
+              <div class="cal-head-left">
+                <span class="cal-eyebrow">Company Holidays</span>
+                <div class="cal-title">
+                  <span id="calMonthLabel">-- ----</span>
+                </div>
+              </div>
+              <div class="cal-head-right">
+                <button class="cal-today-btn" id="calTodayBtn" type="button">Today</button>
+                <button class="cal-nav" id="calPrevBtn" type="button" aria-label="Previous month">‹</button>
+                <button class="cal-nav" id="calNextBtn" type="button" aria-label="Next month">›</button>
+              </div>
+            </div>
+            <div class="cal-weekdays" id="calWeekdays"></div>
+            <div class="cal-grid" id="calGrid"></div>
+          </div>
+        </section>
+      </main>
+    </div>
   </div>
 
   <script type="module">
