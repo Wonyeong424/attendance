@@ -94,19 +94,8 @@
     .nav button:active { transform: translateY(1px); }
     .nav button:focus { outline: none; box-shadow: var(--focus); }
 
-    .sidebar .hint {
-      margin-top: auto;
-      font-size: 12px;
-      color: rgba(229,231,235,0.65);
-      line-height: 1.4;
-      border-top: 1px solid rgba(255,255,255,0.08);
-      padding-top: 14px;
-    }
-
     /* Main */
-    .main {
-      padding: 28px 28px 40px;
-    }
+    .main { padding: 28px 28px 40px; }
 
     .header {
       display: flex;
@@ -147,15 +136,21 @@
       margin-top: 10px;
     }
 
-    input[type="password"] {
+    input[type="password"],
+    input[type="text"],
+    input[type="date"],
+    input[type="number"]{
       border: 1px solid var(--line2);
       border-radius: 12px;
       padding: 10px 12px;
       font-size: 14px;
-      min-width: 220px;
       background: #fff;
     }
-    input[type="password"]:focus {
+
+    input[type="password"]:focus,
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    input[type="number"]:focus{
       outline: none;
       box-shadow: var(--focus);
       border-color: rgba(59,130,246,0.5);
@@ -170,6 +165,7 @@
       font-size: 14px;
       cursor: pointer;
       transition: transform 0.06s ease, opacity 0.2s ease;
+      white-space: nowrap;
     }
     .btn:hover { opacity: 0.92; }
     .btn:active { transform: translateY(1px); }
@@ -180,82 +176,13 @@
       color: #111827;
     }
 
-    .btn.danger {
-      background: #fff;
-      color: #dc2626;
-      border-color: #fecaca;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-    .btn.danger:hover {
-      background: #fef2f2;
-    }
-
-    .btn.download {
-      background: #fff;
-      color: #059669;
-      border-color: #a7f3d0;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-    .btn.download:hover {
-      background: #ecfdf5;
-    }
-
-    .month-tabs {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .month-tab-btn {
-      border: 1px solid var(--line2);
-      background: #fff;
-      color: #111827;
-      border-radius: 999px;
-      padding: 8px 14px;
-      font-size: 13px;
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-    }
-    .month-tab-btn:hover { background: #f3f4f6; }
-    .month-tab-btn.active {
-      background: #111827;
-      color: #fff;
-      border-color: #111827;
-    }
-
-    .history-day-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .btn-delete-day {
-      border: 1px solid #fecaca;
-      background: #fff;
-      color: #dc2626;
-      border-radius: 10px;
-      padding: 6px 10px;
-      font-size: 12px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .btn-delete-day:hover { background: #fef2f2; }
-
     .error {
       color: #dc2626;
       margin: 10px 0 0;
       font-size: 13px;
     }
 
-    /* Table (Excel friendly: keep true <table>) */
+    /* Table (Excel friendly) */
     .table-wrap {
       width: 100%;
       overflow: auto;
@@ -265,7 +192,7 @@
     }
 
     table {
-      border-collapse: collapse; /* Excel copy friendly */
+      border-collapse: collapse;
       width: 100%;
       min-width: 520px;
     }
@@ -301,15 +228,23 @@
       font-weight: 800;
     }
 
-    .history-day {
-      margin-top: 14px;
-    }
+    .history-day { margin-top: 14px; }
     .history-day h4 {
       margin: 18px 0 10px;
       font-size: 14px;
       font-weight: 800;
       color: #111827;
     }
+
+    /* Holiday manager layout */
+    .holiday-controls{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-bottom: 12px;
+    }
+    .holiday-controls .spacer { flex: 1; }
 
     /* Responsive */
     @media (max-width: 860px) {
@@ -338,12 +273,7 @@
       <div class="nav">
         <button id="navToday">📌 Today</button>
         <button id="navHistory">🗂️ History</button>
-        <button id="navCalendar">🗓️ Calendar</button>
-      </div>
-
-      <div class="hint">
-        • 테이블은 복사해서 엑셀에 붙여넣기 쉬운 형태로 유지됩니다.<br />
-        • History가 안 보이면 권한/Rules 문제일 수 있어요.
+        <button id="navHoliday">🎉 Holiday</button>
       </div>
     </aside>
 
@@ -367,7 +297,8 @@
 
       <!-- 관리자 화면 -->
       <section id="adminSection" style="display:none;">
-        <div class="card">
+        <!-- Today -->
+        <div class="card" id="todayCard">
           <div class="header">
             <div>
               <h1 id="title">Today's Attendance</h1>
@@ -389,48 +320,46 @@
 
           <div class="actions">
             <button class="btn secondary" id="toggleHistory">View more ▼</button>
-            <button class="btn download" id="downloadTodayBtn">⬇️ 오늘 데이터 다운로드 (CSV)</button>
           </div>
         </div>
 
+        <!-- History -->
         <div id="historySection" class="card" style="display:none;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
-            <h2 class="section-title" style="margin:0;">History</h2>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button class="btn download" id="downloadHistoryBtn">⬇️ 전체 History 다운로드 (CSV)</button>
-              <button class="btn danger" id="deleteAllHistoryBtn">🗑 지난 기록 전체 삭제 (오늘 제외)</button>
-            </div>
-          </div>
-
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-            <div id="monthTabs" class="month-tabs"></div>
-            <button class="btn download" id="downloadMonthBtn" style="flex-shrink:0;">⬇️ 이 달 다운로드 (CSV)</button>
-          </div>
-
+          <h2 class="section-title">History</h2>
           <div id="historyContainer"></div>
         </div>
 
-        <div id="calendarSection" class="card" style="display:none;">
-          <div class="header" style="margin-bottom: 6px;">
-            <div>
-              <h2 class="section-title" style="margin:0;">Calendar</h2>
-              <div class="meta">회사 일정을 추가하고 관리합니다.</div>
-            </div>
+        <!-- Holiday Manager -->
+        <div id="holidaySection" class="card" style="display:none;">
+          <h2 class="section-title">Holiday</h2>
+
+          <div class="holiday-controls">
+            <label>
+              Year
+              <input id="holidayYear" type="number" min="1900" max="2100" />
+            </label>
+            <button class="btn secondary" id="holidayRefresh">Refresh</button>
+            <div class="spacer"></div>
           </div>
 
-          <div class="pin-row" style="margin-top:10px;">
-            <input type="date" id="calendarDateInput" />
-            <input
-              type="text"
-              id="calendarTitleInput"
-              placeholder="이벤트 내용 (예: 팀 회식, 홍길동 휴가)"
-              style="flex:1; min-width:220px; border:1px solid var(--line2); border-radius:12px; padding:10px 12px; font-size:14px;"
-            />
-            <button class="btn" id="calendarAddBtn">추가</button>
+          <div class="pin-row" style="margin-top: 0;">
+            <input id="holidayName" type="text" placeholder="Name" />
+            <input id="holidayDate" type="date" />
+            <button class="btn" id="addHolidayBtn">Add</button>
           </div>
-          <p id="calendarError" class="error"></p>
 
-          <div id="calendarListContainer" style="margin-top:16px;"></div>
+          <div class="table-wrap" style="margin-top: 12px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Name</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="holidayTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </section>
     </main>
@@ -438,47 +367,43 @@
 
   <script type="module" src="admin.js"></script>
 
-  <!-- Sidebar buttons (admin.js 수정 없이 연결) -->
   <script type="module">
     const navToday = document.getElementById("navToday");
     const navHistory = document.getElementById("navHistory");
-    const navCalendar = document.getElementById("navCalendar");
+    const navHoliday = document.getElementById("navHoliday");
+
     const adminSection = document.getElementById("adminSection");
     const toggleHistory = document.getElementById("toggleHistory");
     const historySection = document.getElementById("historySection");
-    const calendarSection = document.getElementById("calendarSection");
+
+    const todayCard = document.getElementById("todayCard");
+    const holidaySection = document.getElementById("holidaySection");
 
     navToday.addEventListener("click", () => {
+      if (adminSection.style.display === "none") return;
+      holidaySection.style.display = "none";
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
     navHistory.addEventListener("click", () => {
-      // PIN 통과 후에만 동작
       if (adminSection.style.display === "none") return;
 
-      // history가 닫혀있으면 토글 버튼으로 열기
+      holidaySection.style.display = "none";
+
       const isOpen = historySection.style.display === "block";
       if (!isOpen) toggleHistory.click();
 
-      // 열리고 난 뒤 위치로 스크롤
       setTimeout(() => {
         historySection.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 80);
     });
 
-    navCalendar.addEventListener("click", () => {
-      // PIN 통과 후에만 동작
+    navHoliday.addEventListener("click", () => {
       if (adminSection.style.display === "none") return;
 
-      // calendar 섹션이 닫혀있으면 열기 (admin.js의 window.openCalendarSection 사용)
-      const isOpen = calendarSection.style.display === "block";
-      if (!isOpen && window.openCalendarSection) {
-        window.openCalendarSection();
-      }
-
-      setTimeout(() => {
-        calendarSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
+      // history는 굳이 강제 닫지 않음 (원하면 닫아도 됨)
+      holidaySection.style.display = "block";
+      holidaySection.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   </script>
 </body>

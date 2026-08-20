@@ -69,6 +69,20 @@
       <p class="helper">Select your name, then confirm. Times are recorded in IST.</p>
     </main>
 
+    <!-- Company Holidays Calendar (관리자가 등록한 휴일을 그대로 표시) -->
+    <section class="calendar-card" aria-label="Company Holidays">
+      <div class="cal-head">
+        <button class="cal-nav" id="calPrevBtn" type="button" aria-label="Previous month">‹</button>
+        <div class="cal-title">
+          <span id="calMonthLabel">-- ----</span>
+          <button class="cal-today-btn" id="calTodayBtn" type="button">Today</button>
+        </div>
+        <button class="cal-nav" id="calNextBtn" type="button" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-weekdays" id="calWeekdays"></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </section>
+
     <footer class="scene-footer">Internal use only &middot; WiBo Corp HR Systems</footer>
   </div>
 

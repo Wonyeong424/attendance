@@ -2,10 +2,16 @@ import { db } from "./firebase.js";
 import {
   doc,
   getDoc,
-  deleteDoc,
   collection,
   getDocs,
+
+  // Holiday manager
   addDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -18,7 +24,7 @@ const EMPLOYEES = [
   "Jeenat Khan",
   "Rohin Dixit",
   "Kamal Hassain",
-  "Bhanu Pratap",
+  "Sundarlal",
   "Jakir Hossain",
   "Suvimal Saha",
   "Sam Lee",
@@ -74,6 +80,7 @@ window.checkPin = async function () {
     pinSection.style.display = "none";
     adminSection.style.display = "block";
     await loadTodayAttendance();
+    initHolidayAdmin(); // ✅ Holiday 관리자 기능 초기화
   } else {
     pinError.textContent = "PIN이 올바르지 않습니다.";
   }
@@ -85,57 +92,41 @@ pinInput.addEventListener("keydown", (e) => {
 });
 
 /* ==============================
-   📅 오늘 출석 (Promise.all 병렬 로딩)
+   📅 오늘 출석
 ================================ */
-
-// 다운로드 버튼에서 쓸 수 있도록 최근 로드된 오늘 데이터를 저장해 둠
-let todayData = []; // [{ name, attend, leave }]
 
 async function loadTodayAttendance() {
   const todayKey = getTodayKeyIST();
-  document.getElementById("title").textContent =
-    `Today's Attendance - ${todayKey}`;
+  document.getElementById("title").textContent = `Today's Attendance - ${todayKey}`;
 
   const tbody = document.getElementById("attendanceTable");
-  tbody.innerHTML = `<tr><td colspan="3">Loading...</td></tr>`;
+  tbody.innerHTML = "";
 
   try {
-    // ✅ 8명을 순차(await 반복)가 아니라 동시에 요청 → 훨씬 빠름
-    const results = await Promise.all(
-      EMPLOYEES.map(async (name) => {
-        const ref = doc(db, "attendance", todayKey, "records", name);
-        const snap = await getDoc(ref);
+    for (const name of EMPLOYEES) {
+      const ref = doc(db, "attendance", todayKey, "records", name);
+      const snap = await getDoc(ref);
 
-        const attend =
-          snap.exists() && snap.data().attendAt
-            ? formatTimeIST(snap.data().attendAt.toDate().toISOString())
-            : "-";
+      const attend =
+        snap.exists() && snap.data().attendAt
+          ? formatTimeIST(snap.data().attendAt.toDate().toISOString())
+          : "-";
 
-        const leave =
-          snap.exists() && snap.data().leaveAt
-            ? formatTimeIST(snap.data().leaveAt.toDate().toISOString())
-            : "-";
+      const leave =
+        snap.exists() && snap.data().leaveAt
+          ? formatTimeIST(snap.data().leaveAt.toDate().toISOString())
+          : "-";
 
-        return { name, attend, leave };
-      })
-    );
-
-    todayData = results;
-
-    tbody.innerHTML = results
-      .map(
-        (r) => `
+      tbody.innerHTML += `
         <tr>
-          <td>${r.name}</td>
-          <td>${r.attend}</td>
-          <td>${r.leave}</td>
+          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(attend)}</td>
+          <td>${escapeHtml(leave)}</td>
         </tr>
-      `
-      )
-      .join("");
+      `;
+    }
   } catch (e) {
     console.error(e);
-    todayData = [];
     tbody.innerHTML = `
       <tr>
         <td colspan="3" style="color:red;">
@@ -145,7 +136,6 @@ async function loadTodayAttendance() {
     `;
   }
 }
-console.log("✅ projectId =", db.app?.options?.projectId);
 
 /* ==============================
    📜 History 토글
@@ -167,152 +157,36 @@ toggleBtn.addEventListener("click", async () => {
 });
 
 /* ==============================
-   📜 History (월별 탭 + Promise.all 병렬/지연 로딩)
-   ✅ IST "오늘"도 History에 포함 (필터 없음)
+   📜 History
 ================================ */
 
-// monthKey(YYYY-MM) -> 날짜 배열(내림차순)
-let monthDatesMap = {};
-// 최신순 정렬된 monthKey 목록
-let monthKeys = [];
-// monthKey -> [{ date, isToday, records }]  (조회한 달만 캐시됨 = 지연 로딩)
-let monthCache = {};
-// 현재 선택된 달
-let selectedMonth = null;
-
-function monthLabel(monthKey) {
-  const [y, m] = monthKey.split("-");
-  return `${y}년 ${parseInt(m, 10)}월`;
-}
-
-// attendance 컬렉션의 날짜 문서 ID 전체를 가져와 월별로 묶기 (가벼운 조회)
 async function loadHistory() {
+  const todayKey = getTodayKeyIST();
   const container = document.getElementById("historyContainer");
-  const tabsEl = document.getElementById("monthTabs");
-  container.innerHTML = "Loading...";
-  tabsEl.innerHTML = "";
+  container.innerHTML = "Loading.";
 
   try {
     const snap = await getDocs(collection(db, "attendance"));
-    const allDates = snap.docs
+
+    const dates = snap.docs
       .map((d) => d.id)
       .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
-      .sort((a, b) => b.localeCompare(a));
+      .sort((a, b) => b.localeCompare(a))
+      .slice(0, 30);
 
-    monthDatesMap = {};
-    for (const date of allDates) {
-      const monthKey = date.slice(0, 7); // "YYYY-MM"
-      if (!monthDatesMap[monthKey]) monthDatesMap[monthKey] = [];
-      monthDatesMap[monthKey].push(date);
-    }
-    monthKeys = Object.keys(monthDatesMap).sort((a, b) => b.localeCompare(a));
-    monthCache = {};
-    selectedMonth = null;
-
-    if (monthKeys.length === 0) {
-      renderMonthTabs();
+    if (dates.length === 0) {
       container.innerHTML = "<p>No history yet.</p>";
       return;
     }
 
-    // 가장 최근 달을 기본으로 열기 (해당 달만 실제 데이터 조회 = 지연 로딩)
-    await selectMonth(monthKeys[0]);
-  } catch (e) {
-    console.error(e);
-    container.innerHTML = `<p style="color:red;">Failed to load history</p>`;
-  }
-}
+    container.innerHTML = "";
 
-function renderMonthTabs() {
-  const tabsEl = document.getElementById("monthTabs");
-  tabsEl.innerHTML = monthKeys
-    .map(
-      (mk) => `
-      <button class="month-tab-btn${mk === selectedMonth ? " active" : ""}" data-month="${mk}">
-        ${monthLabel(mk)} (${monthDatesMap[mk].length})
-      </button>
-    `
-    )
-    .join("");
-}
+    for (const date of dates) {
+      const isToday = date === todayKey;
 
-// 특정 달의 날짜별 x 직원별 데이터를 병렬로 조회 (캐시에 있으면 재사용)
-async function ensureMonthLoaded(monthKey) {
-  if (monthCache[monthKey]) return monthCache[monthKey];
-
-  const todayKey = getTodayKeyIST();
-  const dates = monthDatesMap[monthKey] || [];
-
-  // ✅ 그 달의 모든 날짜 x 직원 조합을 동시에 요청
-  const days = await Promise.all(
-    dates.map(async (date) => {
-      const records = await Promise.all(
-        EMPLOYEES.map(async (name) => {
-          const ref = doc(db, "attendance", date, "records", name);
-          const s = await getDoc(ref);
-
-          const attend =
-            s.exists() && s.data().attendAt
-              ? formatTimeIST(s.data().attendAt.toDate().toISOString())
-              : "-";
-
-          const leave =
-            s.exists() && s.data().leaveAt
-              ? formatTimeIST(s.data().leaveAt.toDate().toISOString())
-              : "-";
-
-          return { name, attend, leave };
-        })
-      );
-
-      return { date, isToday: date === todayKey, records };
-    })
-  );
-
-  monthCache[monthKey] = days;
-  return days;
-}
-
-async function selectMonth(monthKey) {
-  selectedMonth = monthKey;
-  renderMonthTabs();
-
-  const container = document.getElementById("historyContainer");
-  container.innerHTML = "Loading...";
-
-  const days = await ensureMonthLoaded(monthKey);
-  renderHistoryDays(days);
-}
-
-// 선택된 달의 일자별 테이블을 그리기 (삭제 후 재사용을 위해 함수로 분리)
-function renderHistoryDays(days) {
-  const container = document.getElementById("historyContainer");
-
-  if (!days || days.length === 0) {
-    container.innerHTML = "<p>이 달에는 기록이 없습니다.</p>";
-    return;
-  }
-
-  container.innerHTML = days
-    .map(({ date, isToday, records }) => {
-      const rows = records
-        .map(
-          (r) => `
-          <tr>
-            <td>${r.name}</td>
-            <td>${r.attend}</td>
-            <td>${r.leave}</td>
-          </tr>
-        `
-        )
-        .join("");
-
-      return `
+      let html = `
         <div class="history-day">
-          <div class="history-day-header">
-            <h4 style="margin:0;">${date}${isToday ? " (Today)" : ""}</h4>
-            <button class="btn-delete-day" data-date="${date}">🗑 이 날짜 삭제</button>
-          </div>
+          <h4>${escapeHtml(date)}${isToday ? " (Today)" : ""}</h4>
           <table>
             <thead>
               <tr>
@@ -322,381 +196,169 @@ function renderHistoryDays(days) {
               </tr>
             </thead>
             <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        </div>
       `;
-    })
-    .join("");
-}
 
-// 월 탭 클릭 (이벤트 위임)
-document.getElementById("monthTabs").addEventListener("click", (e) => {
-  const btn = e.target.closest(".month-tab-btn");
-  if (!btn) return;
-  if (btn.dataset.month === selectedMonth) return;
-  selectMonth(btn.dataset.month);
-});
+      for (const name of EMPLOYEES) {
+        const ref = doc(db, "attendance", date, "records", name);
+        const snap = await getDoc(ref);
 
-/* ==============================
-   ⬇️ CSV 다운로드 (Excel에서 바로 열림)
-================================ */
+        const attend =
+          snap.exists() && snap.data().attendAt
+            ? formatTimeIST(snap.data().attendAt.toDate().toISOString())
+            : "-";
 
-function toCSV(rows) {
-  return rows
-    .map((row) =>
-      row
-        .map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`)
-        .join(",")
-    )
-    .join("\r\n");
-}
+        const leave =
+          snap.exists() && snap.data().leaveAt
+            ? formatTimeIST(snap.data().leaveAt.toDate().toISOString())
+            : "-";
 
-function downloadCSV(filename, csvContent) {
-  // UTF-8 BOM 추가 → Excel에서 한글 깨짐 방지
-  const blob = new Blob(["\uFEFF" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-document.getElementById("downloadTodayBtn").addEventListener("click", () => {
-  if (todayData.length === 0) {
-    alert("다운로드할 데이터가 없습니다.");
-    return;
-  }
-  const todayKey = getTodayKeyIST();
-  const rows = [
-    ["Name", "Attend", "Leave"],
-    ...todayData.map((r) => [r.name, r.attend, r.leave]),
-  ];
-  downloadCSV(`attendance_${todayKey}.csv`, toCSV(rows));
-});
-
-// 현재 선택된 달만 다운로드
-document.getElementById("downloadMonthBtn").addEventListener("click", async () => {
-  if (!historyLoaded) {
-    await loadHistory();
-    historyLoaded = true;
-  }
-  if (!selectedMonth) {
-    alert("선택된 달이 없습니다.");
-    return;
-  }
-
-  const days = await ensureMonthLoaded(selectedMonth);
-  if (days.length === 0) {
-    alert("다운로드할 데이터가 없습니다.");
-    return;
-  }
-
-  const rows = [["Date", "Name", "Attend", "Leave"]];
-  for (const { date, records } of days) {
-    for (const r of records) rows.push([date, r.name, r.attend, r.leave]);
-  }
-  downloadCSV(`attendance_${selectedMonth}.csv`, toCSV(rows));
-});
-
-// 전체 달을 모두 불러와서 한 번에 다운로드
-document.getElementById("downloadHistoryBtn").addEventListener("click", async () => {
-  if (!historyLoaded) {
-    await loadHistory();
-    historyLoaded = true;
-  }
-  if (monthKeys.length === 0) {
-    alert("다운로드할 History 데이터가 없습니다.");
-    return;
-  }
-
-  const btn = document.getElementById("downloadHistoryBtn");
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "불러오는 중...";
-
-  try {
-    // 아직 조회하지 않은 달들도 병렬로 모두 불러오기
-    await Promise.all(monthKeys.map((mk) => ensureMonthLoaded(mk)));
-
-    const rows = [["Date", "Name", "Attend", "Leave"]];
-    for (const mk of monthKeys) {
-      for (const { date, records } of monthCache[mk]) {
-        for (const r of records) rows.push([date, r.name, r.attend, r.leave]);
-      }
-    }
-    downloadCSV("attendance_history_all.csv", toCSV(rows));
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
-  }
-});
-
-/* ==============================
-   🗑️ 데이터 삭제
-================================ */
-
-// 특정 날짜의 모든 기록(직원별 records + 날짜 부모 문서) 삭제
-async function deleteDayData(date) {
-  const ok = confirm(
-    `"${date}" 날짜의 출석 데이터를 완전히 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
-  );
-  if (!ok) return;
-
-  try {
-    await Promise.all(
-      EMPLOYEES.map((name) =>
-        deleteDoc(doc(db, "attendance", date, "records", name)).catch(() => {})
-      )
-    );
-    await deleteDoc(doc(db, "attendance", date)).catch(() => {});
-
-    // 화면/캐시에서도 즉시 제거 (재조회 없이 빠르게 반영)
-    const monthKey = date.slice(0, 7);
-
-    if (monthCache[monthKey]) {
-      monthCache[monthKey] = monthCache[monthKey].filter((d) => d.date !== date);
-    }
-    if (monthDatesMap[monthKey]) {
-      monthDatesMap[monthKey] = monthDatesMap[monthKey].filter((d) => d !== date);
-
-      if (monthDatesMap[monthKey].length === 0) {
-        delete monthDatesMap[monthKey];
-        delete monthCache[monthKey];
-        monthKeys = monthKeys.filter((mk) => mk !== monthKey);
-        if (selectedMonth === monthKey) {
-          selectedMonth = monthKeys[0] || null;
-        }
-      }
-    }
-
-    renderMonthTabs();
-    if (selectedMonth) {
-      renderHistoryDays(monthCache[selectedMonth] || []);
-    } else {
-      document.getElementById("historyContainer").innerHTML = "<p>No history yet.</p>";
-    }
-
-    alert(`"${date}" 데이터가 삭제되었습니다.`);
-  } catch (e) {
-    console.error(e);
-    alert("삭제 중 오류가 발생했습니다.");
-  }
-}
-
-// 오늘을 제외한 모든 과거 기록 삭제 (컬렉션 크기를 줄여 로딩 속도 개선)
-async function deleteAllHistoryExceptToday() {
-  const todayKey = getTodayKeyIST();
-  const ok = confirm(
-    `오늘(${todayKey})을 제외한 모든 과거 출석 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없으며 시간이 다소 걸릴 수 있습니다.`
-  );
-  if (!ok) return;
-
-  const deleteAllHistoryBtn = document.getElementById("deleteAllHistoryBtn");
-  deleteAllHistoryBtn.disabled = true;
-  deleteAllHistoryBtn.textContent = "삭제 중...";
-
-  try {
-    // 화면에 보이는 달뿐 아니라 실제 컬렉션 전체를 기준으로 삭제 대상 조회
-    const snap = await getDocs(collection(db, "attendance"));
-    const dates = snap.docs
-      .map((d) => d.id)
-      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d !== todayKey);
-
-    // ✅ 날짜별로 병렬 삭제 (각 날짜 내부의 직원 기록도 병렬 삭제)
-    await Promise.all(
-      dates.map(async (date) => {
-        await Promise.all(
-          EMPLOYEES.map((name) =>
-            deleteDoc(doc(db, "attendance", date, "records", name)).catch(() => {})
-          )
-        );
-        await deleteDoc(doc(db, "attendance", date)).catch(() => {});
-      })
-    );
-
-    alert(`${dates.length}개 날짜의 기록을 삭제했습니다.`);
-
-    historyLoaded = false;
-    await loadHistory();
-    historyLoaded = true;
-  } catch (e) {
-    console.error(e);
-    alert("삭제 중 오류가 발생했습니다.");
-  } finally {
-    deleteAllHistoryBtn.disabled = false;
-    deleteAllHistoryBtn.textContent = "🗑 지난 기록 전체 삭제 (오늘 제외)";
-  }
-}
-
-// 날짜별 삭제 버튼 (이벤트 위임: history가 다시 그려져도 동작)
-document.getElementById("historyContainer").addEventListener("click", (e) => {
-  const btn = e.target.closest(".btn-delete-day");
-  if (!btn) return;
-  deleteDayData(btn.dataset.date);
-});
-
-// 전체 과거 기록 삭제 버튼
-document.getElementById("deleteAllHistoryBtn").addEventListener("click", () => {
-  deleteAllHistoryExceptToday();
-});
-
-/* ==============================
-   🗓️ Calendar (회사 일정 관리)
-   - Firestore 컬렉션: calendarEvents
-     문서 필드: { date: "YYYY-MM-DD", title: string, createdAt }
-================================ */
-
-const calendarSection = document.getElementById("calendarSection");
-const calendarDateInput = document.getElementById("calendarDateInput");
-const calendarTitleInput = document.getElementById("calendarTitleInput");
-const calendarAddBtn = document.getElementById("calendarAddBtn");
-const calendarError = document.getElementById("calendarError");
-const calendarListContainer = document.getElementById("calendarListContainer");
-
-let calendarLoaded = false;
-let calendarEvents = []; // [{ id, date, title }]
-
-// 사이드바 "Calendar" 클릭 시 섹션을 열고(최초 1회) 데이터를 로드
-window.openCalendarSection = async function () {
-  calendarSection.style.display = "block";
-  if (!calendarLoaded) {
-    await loadCalendarEvents();
-    calendarLoaded = true;
-  }
-};
-
-async function loadCalendarEvents() {
-  calendarListContainer.innerHTML = "Loading...";
-
-  try {
-    const snap = await getDocs(collection(db, "calendarEvents"));
-    calendarEvents = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
-      .filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.date))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    renderCalendarEvents();
-  } catch (e) {
-    console.error(e);
-    calendarListContainer.innerHTML = `<p style="color:red;">Failed to load calendar events</p>`;
-  }
-}
-
-function renderCalendarEvents() {
-  if (calendarEvents.length === 0) {
-    calendarListContainer.innerHTML = "<p>등록된 일정이 없습니다.</p>";
-    return;
-  }
-
-  // 날짜별로 그룹화
-  const grouped = {};
-  for (const ev of calendarEvents) {
-    if (!grouped[ev.date]) grouped[ev.date] = [];
-    grouped[ev.date].push(ev);
-  }
-
-  const todayKey = getTodayKeyIST();
-
-  calendarListContainer.innerHTML = Object.keys(grouped)
-    .sort((a, b) => a.localeCompare(b))
-    .map((date) => {
-      const rows = grouped[date]
-        .map(
-          (ev) => `
+        html += `
           <tr>
-            <td>${ev.title}</td>
-            <td style="width:1%;">
-              <button class="btn-delete-day" data-id="${ev.id}">🗑 삭제</button>
-            </td>
+            <td>${escapeHtml(name)}</td>
+            <td>${escapeHtml(attend)}</td>
+            <td>${escapeHtml(leave)}</td>
           </tr>
-        `
-        )
-        .join("");
+        `;
+      }
 
-      return `
-        <div class="history-day">
-          <div class="history-day-header">
-            <h4 style="margin:0;">${date}${date === todayKey ? " (Today)" : ""}</h4>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Event</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
+      html += `
             </tbody>
           </table>
         </div>
       `;
-    })
-    .join("");
-}
 
-calendarAddBtn.addEventListener("click", async () => {
-  calendarError.textContent = "";
-
-  const date = calendarDateInput.value;
-  const title = calendarTitleInput.value.trim();
-
-  if (!date) {
-    calendarError.textContent = "날짜를 선택해 주세요.";
-    return;
-  }
-  if (!title) {
-    calendarError.textContent = "이벤트 내용을 입력해 주세요.";
-    return;
-  }
-
-  calendarAddBtn.disabled = true;
-  try {
-    const ref = await addDoc(collection(db, "calendarEvents"), {
-      date,
-      title,
-      createdAt: serverTimestamp(),
-    });
-
-    calendarEvents.push({ id: ref.id, date, title });
-    calendarEvents.sort((a, b) => a.date.localeCompare(b.date));
-    renderCalendarEvents();
-
-    calendarTitleInput.value = "";
+      container.innerHTML += html;
+    }
   } catch (e) {
     console.error(e);
-    calendarError.textContent = "일정 추가 중 오류가 발생했습니다.";
-  } finally {
-    calendarAddBtn.disabled = false;
+    container.innerHTML = `<p style="color:red;">Failed to load history</p>`;
   }
-});
+}
 
-calendarTitleInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") calendarAddBtn.click();
-});
+/* ==============================
+   🎉 Holiday Manager
+   저장 형식:
+   holidays 컬렉션
+   { name: string, date: "YYYY-MM-DD", year: number, createdAt: serverTimestamp() }
+================================ */
 
-// 이벤트 삭제 (이벤트 위임)
-calendarListContainer.addEventListener("click", async (e) => {
-  const btn = e.target.closest(".btn-delete-day");
-  if (!btn) return;
+const holidaySection = document.getElementById("holidaySection");
+const holidayYearEl = document.getElementById("holidayYear");
+const holidayRefreshBtn = document.getElementById("holidayRefresh");
+const holidayNameEl = document.getElementById("holidayName");
+const holidayDateEl = document.getElementById("holidayDate");
+const addHolidayBtn = document.getElementById("addHolidayBtn");
+const holidayTbody = document.getElementById("holidayTableBody");
 
-  const id = btn.dataset.id;
-  const ok = confirm("이 일정을 삭제하시겠습니까?");
-  if (!ok) return;
+let holidayUnsub = null;
+let holidayInited = false;
 
-  try {
-    await deleteDoc(doc(db, "calendarEvents", id));
-    calendarEvents = calendarEvents.filter((ev) => ev.id !== id);
-    renderCalendarEvents();
-  } catch (err) {
-    console.error(err);
-    alert("삭제 중 오류가 발생했습니다.");
-  }
-});
+function initHolidayAdmin() {
+  if (holidayInited) return;
+  holidayInited = true;
+
+  // 기본 year = 올해
+  const nowYear = new Date().getFullYear();
+  holidayYearEl.value = String(nowYear);
+
+  // Add
+  addHolidayBtn.addEventListener("click", async () => {
+    const name = (holidayNameEl.value || "").trim();
+    const dateStr = (holidayDateEl.value || "").trim(); // YYYY-MM-DD
+
+    if (!name) return;
+    if (!dateStr) return;
+
+    const year = Number(dateStr.slice(0, 4));
+    if (!Number.isFinite(year)) return;
+
+    try {
+      await addDoc(collection(db, "holidays"), {
+        name,
+        date: dateStr,
+        year,
+        createdAt: serverTimestamp(),
+      });
+
+      holidayNameEl.value = "";
+      // date는 유지해도 됨
+    } catch (e) {
+      console.error(e);
+    }
+  });
+
+  // Refresh
+  holidayRefreshBtn.addEventListener("click", () => {
+    const y = Number(holidayYearEl.value);
+    subscribeHolidays(Number.isFinite(y) ? y : new Date().getFullYear());
+  });
+
+  // year input Enter
+  holidayYearEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") holidayRefreshBtn.click();
+  });
+
+  // 처음 구독
+  subscribeHolidays(nowYear);
+
+  // 섹션이 숨겨져 있어도 구독은 계속 유지(원하면 nav 눌렀을 때만 subscribe 하도록 바꿀 수도 있음)
+  holidaySection.style.display = holidaySection.style.display || "none";
+}
+
+function subscribeHolidays(year) {
+  if (holidayUnsub) holidayUnsub();
+
+  const q = query(
+    collection(db, "holidays"),
+    where("year", "==", Number(year)),
+    orderBy("date", "asc")
+  );
+
+  holidayUnsub = onSnapshot(
+    q,
+    (snap) => {
+      holidayTbody.innerHTML = "";
+
+      if (snap.empty) return;
+
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${escapeHtml(d.date || "-")}</td>
+          <td>${escapeHtml(d.name || "-")}</td>
+          <td><button class="btn secondary" data-del="${docSnap.id}">Delete</button></td>
+        `;
+
+        tr.querySelector("button").addEventListener("click", async () => {
+          try {
+            await deleteDoc(doc(db, "holidays", docSnap.id));
+          } catch (e) {
+            console.error(e);
+          }
+        });
+
+        holidayTbody.appendChild(tr);
+      });
+    },
+    (err) => {
+      console.error(err);
+      holidayTbody.innerHTML = `
+        <tr><td colspan="3" style="color:red;">Failed to load</td></tr>
+      `;
+    }
+  );
+}
+
+/* ==============================
+   Utils
+================================ */
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
