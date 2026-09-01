@@ -147,6 +147,7 @@ const historyPrevBtn = document.getElementById("historyPrevBtn");
 const historyNextBtn = document.getElementById("historyNextBtn");
 const historyThisMonthBtn = document.getElementById("historyThisMonthBtn");
 const historyMonthLabel = document.getElementById("historyMonthLabel");
+const historyDownloadBtn = document.getElementById("historyDownloadBtn");
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -199,6 +200,10 @@ historyThisMonthBtn?.addEventListener("click", () => {
   loadHistoryMonth(historyYear, historyMonth);
 });
 
+historyDownloadBtn?.addEventListener("click", () => {
+  exportHistoryMonthToExcel(historyYear, historyMonth);
+});
+
 /* ==============================
    📜 History (월 단위 + 병렬 로딩)
 
@@ -226,6 +231,21 @@ function getMonthDateKeys(year, month) {
   return keys.reverse(); // 최신 날짜부터
 }
 
+async function fetchMonthDayResults(year, month) {
+  const dates = getMonthDateKeys(year, month);
+
+  // 날짜별로 records 서브컬렉션 전체를 한 번에(1 query) 가져오고,
+  // 모든 날짜를 동시에(병렬) 요청한다.
+  return Promise.all(
+    dates.map(async (date) => {
+      const recordsSnap = await getDocs(collection(db, "attendance", date, "records"));
+      const byName = new Map();
+      recordsSnap.forEach((docSnap) => byName.set(docSnap.id, docSnap.data()));
+      return { date, byName };
+    })
+  );
+}
+
 async function loadHistoryMonth(year, month) {
   const todayKey = getTodayKeyIST();
   const container = document.getElementById("historyContainer");
@@ -237,23 +257,12 @@ async function loadHistoryMonth(year, month) {
   container.innerHTML = "Loading.";
 
   try {
-    const dates = getMonthDateKeys(year, month);
+    const dayResults = await fetchMonthDayResults(year, month);
 
-    if (dates.length === 0) {
+    if (dayResults.length === 0) {
       container.innerHTML = "<p>No days in this month yet.</p>";
       return;
     }
-
-    // 날짜별로 records 서브컬렉션 전체를 한 번에(1 query) 가져오고,
-    // 모든 날짜를 동시에(병렬) 요청한다.
-    const dayResults = await Promise.all(
-      dates.map(async (date) => {
-        const recordsSnap = await getDocs(collection(db, "attendance", date, "records"));
-        const byName = new Map();
-        recordsSnap.forEach((docSnap) => byName.set(docSnap.id, docSnap.data()));
-        return { date, byName };
-      })
-    );
 
     // 기록이 하나도 없는 날은 건너뛰어 목록을 더 짧고 빠르게 표시
     const daysWithData = dayResults.filter(({ byName }) => byName.size > 0);
@@ -302,6 +311,80 @@ async function loadHistoryMonth(year, month) {
   } catch (e) {
     console.error(e);
     container.innerHTML = `<p style="color:red;">Failed to load history</p>`;
+  }
+}
+
+/* ==============================
+   📥 History → Excel 다운로드
+
+   현재 선택된 달(historyYear/historyMonth)의 출퇴근 기록을
+   SheetJS(xlsx)로 .xlsx 파일로 만들어 다운로드한다.
+   (admin.html에 <script src=".../xlsx.full.min.js"> 로 로드된
+   전역 XLSX 객체를 사용)
+================================ */
+
+async function exportHistoryMonthToExcel(year, month) {
+  if (typeof XLSX === "undefined") {
+    alert("Excel 라이브러리를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.");
+    return;
+  }
+
+  const originalText = historyDownloadBtn ? historyDownloadBtn.textContent : "";
+  if (historyDownloadBtn) {
+    historyDownloadBtn.disabled = true;
+    historyDownloadBtn.textContent = "Preparing...";
+  }
+
+  try {
+    const dayResults = await fetchMonthDayResults(year, month);
+
+    // 날짜 오름차순으로 정렬 (엑셀에서 위→아래로 시간순 확인하기 편하게)
+    const sorted = [...dayResults].sort((a, b) => a.date.localeCompare(b.date));
+
+    const sheetRows = [["Date", "Name", "Attend", "Leave", "Status"]];
+
+    for (const { date, byName } of sorted) {
+      for (const name of EMPLOYEES) {
+        const data = byName.get(name);
+        const attendAt = data?.attendAt ? data.attendAt.toDate().toISOString() : null;
+        const leaveAt = data?.leaveAt ? data.leaveAt.toDate().toISOString() : null;
+
+        const attend = attendAt ? formatTimeIST(attendAt) : "";
+        const leave = leaveAt ? formatTimeIST(leaveAt) : "";
+        const status = attendAt ? (leaveAt ? "Present" : "Attended (no leave)") : "Absent";
+
+        sheetRows.push([date, name, attend, leave, status]);
+      }
+    }
+
+    if (sheetRows.length === 1) {
+      alert("이 달에는 다운로드할 출퇴근 기록이 없습니다.");
+      return;
+    }
+
+    const worksheet = XLSX.utils.aoa_to_sheet(sheetRows);
+    worksheet["!cols"] = [
+      { wch: 12 }, // Date
+      { wch: 20 }, // Name
+      { wch: 10 }, // Attend
+      { wch: 10 }, // Leave
+      { wch: 20 }, // Status
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    const sheetName = `${MONTH_NAMES[month - 1]} ${year}`.slice(0, 31); // 시트명 31자 제한
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+    const fileName = `attendance_${year}-${String(month).padStart(2, "0")}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  } catch (e) {
+    console.error(e);
+    alert("엑셀 파일 생성에 실패했습니다.");
+  } finally {
+    if (historyDownloadBtn) {
+      historyDownloadBtn.disabled = false;
+      historyDownloadBtn.textContent = originalText;
+    }
   }
 }
 
