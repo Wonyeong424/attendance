@@ -165,6 +165,14 @@ let historyYear = todayY;
 let historyMonth = todayM; // 1-12
 let historyLoaded = false; // 최소 한 번은 로드했는지
 
+// 다운로드 버튼이 "클릭 즉시" 동기적으로 파일을 저장할 수 있도록
+// 화면에 표시 중인 데이터를 캐시해둔다. (비동기 fetch 이후에
+// writeFile을 호출하면 Safari 등에서 사용자 제스처로 인정되지 않아
+// 다운로드가 조용히 막히는 문제가 있었음)
+let historyCache = { key: null, dayResults: null };
+
+if (historyDownloadBtn) historyDownloadBtn.disabled = true;
+
 toggleBtn.addEventListener("click", async () => {
   const open = historySection.style.display === "block";
   historySection.style.display = open ? "none" : "block";
@@ -255,9 +263,14 @@ async function loadHistoryMonth(year, month) {
   }
 
   container.innerHTML = "Loading.";
+  if (historyDownloadBtn) historyDownloadBtn.disabled = true;
 
   try {
     const dayResults = await fetchMonthDayResults(year, month);
+
+    // 다운로드 버튼이 클릭 즉시 동기적으로 파일을 만들 수 있도록 캐시
+    historyCache = { key: `${year}-${month}`, dayResults };
+    if (historyDownloadBtn) historyDownloadBtn.disabled = false;
 
     if (dayResults.length === 0) {
       container.innerHTML = "<p>No days in this month yet.</p>";
@@ -321,27 +334,32 @@ async function loadHistoryMonth(year, month) {
    SheetJS(xlsx)로 .xlsx 파일로 만들어 다운로드한다.
    (admin.html에 <script src=".../xlsx.full.min.js"> 로 로드된
    전역 XLSX 객체를 사용)
+
+   ⚠️ 클릭 → await(Firestore 조회) → writeFile 순서로 짜면
+   Safari 등 일부 브라우저가 "사용자가 직접 누른 클릭"으로
+   인정하지 않아 다운로드를 그냥 무시해버린다.
+   그래서 데이터는 History를 불러올 때 미리 캐시해두고,
+   버튼 클릭 시에는 await 없이 곧바로 동기적으로
+   workbook을 만들어 writeFile을 호출한다.
 ================================ */
 
-async function exportHistoryMonthToExcel(year, month) {
+function exportHistoryMonthToExcel(year, month) {
   if (typeof XLSX === "undefined") {
     alert("Excel 라이브러리를 불러오지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.");
     return;
   }
 
-  const originalText = historyDownloadBtn ? historyDownloadBtn.textContent : "";
-  if (historyDownloadBtn) {
-    historyDownloadBtn.disabled = true;
-    historyDownloadBtn.textContent = "Preparing...";
+  const key = `${year}-${month}`;
+  if (historyCache.key !== key || !historyCache.dayResults) {
+    alert("데이터를 아직 불러오는 중입니다. 잠시 후 다시 눌러 주세요.");
+    return;
   }
 
   try {
-    const dayResults = await fetchMonthDayResults(year, month);
-
     // 날짜 오름차순으로 정렬 (엑셀에서 위→아래로 시간순 확인하기 편하게)
-    const sorted = [...dayResults].sort((a, b) => a.date.localeCompare(b.date));
+    const sorted = [...historyCache.dayResults].sort((a, b) => a.date.localeCompare(b.date));
 
-    const sheetRows = [["Date", "Name", "Attend", "Leave", "Status"]];
+    const sheetRows = [["날짜", "이름", "출근", "퇴근", "상태"]];
 
     for (const { date, byName } of sorted) {
       for (const name of EMPLOYEES) {
@@ -351,7 +369,7 @@ async function exportHistoryMonthToExcel(year, month) {
 
         const attend = attendAt ? formatTimeIST(attendAt) : "";
         const leave = leaveAt ? formatTimeIST(leaveAt) : "";
-        const status = attendAt ? (leaveAt ? "Present" : "Attended (no leave)") : "Absent";
+        const status = attendAt ? (leaveAt ? "출근/퇴근 완료" : "출근 (퇴근 미기록)") : "결근";
 
         sheetRows.push([date, name, attend, leave, status]);
       }
@@ -362,29 +380,33 @@ async function exportHistoryMonthToExcel(year, month) {
       return;
     }
 
+    // aoa_to_sheet은 문자열을 그대로 UTF-8 셀 값으로 넣는다.
+    // .xlsx(OOXML)는 내부적으로 항상 UTF-8을 쓰기 때문에
+    // 한글이 깨지는 CSV 인코딩 문제와는 무관하다.
     const worksheet = XLSX.utils.aoa_to_sheet(sheetRows);
     worksheet["!cols"] = [
-      { wch: 12 }, // Date
-      { wch: 20 }, // Name
-      { wch: 10 }, // Attend
-      { wch: 10 }, // Leave
-      { wch: 20 }, // Status
+      { wch: 12 }, // 날짜
+      { wch: 20 }, // 이름
+      { wch: 10 }, // 출근
+      { wch: 10 }, // 퇴근
+      { wch: 20 }, // 상태
     ];
 
     const workbook = XLSX.utils.book_new();
-    const sheetName = `${MONTH_NAMES[month - 1]} ${year}`.slice(0, 31); // 시트명 31자 제한
+    workbook.Props = { Title: `Attendance ${year}-${String(month).padStart(2, "0")}` };
+
+    // 시트명에는 특수문자(: \ / ? * [ ])와 31자 제한이 있어 안전하게 구성
+    const sheetName = `${year}-${String(month).padStart(2, "0")}`;
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
     const fileName = `attendance_${year}-${String(month).padStart(2, "0")}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+
+    // writeFile을 클릭 핸들러 안에서 동기적으로(=await 없이) 바로 호출해야
+    // 브라우저가 사용자 제스처로 인식해서 다운로드 팝업/저장이 막히지 않는다.
+    XLSX.writeFile(workbook, fileName, { bookType: "xlsx" });
   } catch (e) {
     console.error(e);
     alert("엑셀 파일 생성에 실패했습니다.");
-  } finally {
-    if (historyDownloadBtn) {
-      historyDownloadBtn.disabled = false;
-      historyDownloadBtn.textContent = originalText;
-    }
   }
 }
 
