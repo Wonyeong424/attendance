@@ -143,7 +143,26 @@ async function loadTodayAttendance() {
 
 const toggleBtn = document.getElementById("toggleHistory");
 const historySection = document.getElementById("historySection");
-let historyLoaded = false;
+const historyPrevBtn = document.getElementById("historyPrevBtn");
+const historyNextBtn = document.getElementById("historyNextBtn");
+const historyThisMonthBtn = document.getElementById("historyThisMonthBtn");
+const historyMonthLabel = document.getElementById("historyMonthLabel");
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+// IST 기준 오늘의 year/month로 초기화
+const { y: todayY, m: todayM } = (() => {
+  const key = getTodayKeyIST(); // "YYYY-MM-DD"
+  const [y, m] = key.split("-").map(Number);
+  return { y, m };
+})();
+
+let historyYear = todayY;
+let historyMonth = todayM; // 1-12
+let historyLoaded = false; // 최소 한 번은 로드했는지
 
 toggleBtn.addEventListener("click", async () => {
   const open = historySection.style.display === "block";
@@ -151,40 +170,117 @@ toggleBtn.addEventListener("click", async () => {
   toggleBtn.textContent = open ? "View more ▼" : "Hide ▲";
 
   if (!open && !historyLoaded) {
-    await loadHistory();
     historyLoaded = true;
+    await loadHistoryMonth(historyYear, historyMonth);
   }
 });
 
+historyPrevBtn?.addEventListener("click", () => {
+  historyMonth -= 1;
+  if (historyMonth < 1) {
+    historyMonth = 12;
+    historyYear -= 1;
+  }
+  loadHistoryMonth(historyYear, historyMonth);
+});
+
+historyNextBtn?.addEventListener("click", () => {
+  historyMonth += 1;
+  if (historyMonth > 12) {
+    historyMonth = 1;
+    historyYear += 1;
+  }
+  loadHistoryMonth(historyYear, historyMonth);
+});
+
+historyThisMonthBtn?.addEventListener("click", () => {
+  historyYear = todayY;
+  historyMonth = todayM;
+  loadHistoryMonth(historyYear, historyMonth);
+});
+
 /* ==============================
-   📜 History
+   📜 History (월 단위 + 병렬 로딩)
+
+   기존 방식: 날짜 30개 x 직원 8명 = 최대 240번의
+   개별 getDoc() 요청을 "순차적으로" 기다려서 매우 느렸음.
+
+   개선: 하루치 출근 기록은 records 서브컬렉션 전체를
+   getDocs() 한 번으로 가져오고, 날짜들도 Promise.all로
+   동시에(병렬로) 로딩함. 또한 "최근 30일" 대신
+   선택한 달(月) 하나만 로드해서 데이터량 자체를 줄임.
 ================================ */
 
-async function loadHistory() {
+function getMonthDateKeys(year, month) {
+  // month: 1-12
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const todayKey = getTodayKeyIST();
+
+  const isCurrentMonth = year === todayY && month === todayM;
+  const lastDay = isCurrentMonth ? Number(todayKey.slice(8, 10)) : daysInMonth;
+
+  const keys = [];
+  for (let d = 1; d <= lastDay; d++) {
+    keys.push(`${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
+  }
+  return keys.reverse(); // 최신 날짜부터
+}
+
+async function loadHistoryMonth(year, month) {
   const todayKey = getTodayKeyIST();
   const container = document.getElementById("historyContainer");
+
+  if (historyMonthLabel) {
+    historyMonthLabel.textContent = `${MONTH_NAMES[month - 1]} ${year}`;
+  }
+
   container.innerHTML = "Loading.";
 
   try {
-    const snap = await getDocs(collection(db, "attendance"));
-
-    const dates = snap.docs
-      .map((d) => d.id)
-      .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
-      .sort((a, b) => b.localeCompare(a))
-      .slice(0, 30);
+    const dates = getMonthDateKeys(year, month);
 
     if (dates.length === 0) {
-      container.innerHTML = "<p>No history yet.</p>";
+      container.innerHTML = "<p>No days in this month yet.</p>";
       return;
     }
 
-    container.innerHTML = "";
+    // 날짜별로 records 서브컬렉션 전체를 한 번에(1 query) 가져오고,
+    // 모든 날짜를 동시에(병렬) 요청한다.
+    const dayResults = await Promise.all(
+      dates.map(async (date) => {
+        const recordsSnap = await getDocs(collection(db, "attendance", date, "records"));
+        const byName = new Map();
+        recordsSnap.forEach((docSnap) => byName.set(docSnap.id, docSnap.data()));
+        return { date, byName };
+      })
+    );
 
-    for (const date of dates) {
+    // 기록이 하나도 없는 날은 건너뛰어 목록을 더 짧고 빠르게 표시
+    const daysWithData = dayResults.filter(({ byName }) => byName.size > 0);
+
+    if (daysWithData.length === 0) {
+      container.innerHTML = "<p>No records for this month.</p>";
+      return;
+    }
+
+    const parts = daysWithData.map(({ date, byName }) => {
       const isToday = date === todayKey;
 
-      let html = `
+      const rows = EMPLOYEES.map((name) => {
+        const data = byName.get(name);
+        const attend = data?.attendAt ? formatTimeIST(data.attendAt.toDate().toISOString()) : "-";
+        const leave = data?.leaveAt ? formatTimeIST(data.leaveAt.toDate().toISOString()) : "-";
+
+        return `
+          <tr>
+            <td>${escapeHtml(name)}</td>
+            <td>${escapeHtml(attend)}</td>
+            <td>${escapeHtml(leave)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      return `
         <div class="history-day">
           <h4>${escapeHtml(date)}${isToday ? " (Today)" : ""}</h4>
           <table>
@@ -195,40 +291,14 @@ async function loadHistory() {
                 <th>Leave</th>
               </tr>
             </thead>
-            <tbody>
-      `;
-
-      for (const name of EMPLOYEES) {
-        const ref = doc(db, "attendance", date, "records", name);
-        const snap = await getDoc(ref);
-
-        const attend =
-          snap.exists() && snap.data().attendAt
-            ? formatTimeIST(snap.data().attendAt.toDate().toISOString())
-            : "-";
-
-        const leave =
-          snap.exists() && snap.data().leaveAt
-            ? formatTimeIST(snap.data().leaveAt.toDate().toISOString())
-            : "-";
-
-        html += `
-          <tr>
-            <td>${escapeHtml(name)}</td>
-            <td>${escapeHtml(attend)}</td>
-            <td>${escapeHtml(leave)}</td>
-          </tr>
-        `;
-      }
-
-      html += `
-            </tbody>
+            <tbody>${rows}</tbody>
           </table>
         </div>
       `;
+    });
 
-      container.innerHTML += html;
-    }
+    // 한 번에 렌더링 (반복 innerHTML += 로 인한 리플로우 방지)
+    container.innerHTML = parts.join("");
   } catch (e) {
     console.error(e);
     container.innerHTML = `<p style="color:red;">Failed to load history</p>`;
